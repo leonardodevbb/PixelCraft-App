@@ -5,7 +5,7 @@ export function buildMenus(): MenuDef[] {
   return [
     {
       label: 'Arquivo',
-      items: ['file.new', 'file.open', '-', 'file.save', 'file.saveAs', '-', 'file.importLayer', 'file.importSheet', '-', 'file.exportPng', 'file.exportGif', 'file.exportSheet', 'file.exportSequence', '-', 'file.newWindow', 'file.close'],
+      items: ['file.new', 'file.open', '-', 'file.save', 'file.saveAs', '-', 'file.importLayer', 'file.importSheet', '-', 'file.exportPng', 'file.exportGif', 'file.exportSheet', 'file.exportSequence', 'file.exportTileset', '-', 'file.newWindow', 'file.close'],
     },
     {
       label: 'Editar',
@@ -47,6 +47,7 @@ export function buildMenus(): MenuDef[] {
         '-',
         'image.offset',
         'image.center',
+        'image.tiles',
         '-',
         'image.invert',
         'image.replaceColor',
@@ -127,6 +128,7 @@ export function buildMenus(): MenuDef[] {
         '-',
         'view.pixelGrid',
         'view.tileGrid',
+        'view.tiledPreview',
         '-',
         'view.rightPanel',
         'view.timeline',

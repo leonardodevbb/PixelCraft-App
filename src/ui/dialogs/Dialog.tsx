@@ -10,10 +10,12 @@ interface DialogProps {
   /** Escape/backdrop close disabled (for blocking confirmations). */
   modal?: boolean;
   testId?: string;
+  /** 'side': docked at the right without dimming, so the canvas preview stays visible. */
+  placement?: 'center' | 'side';
 }
 
 /** Modal dialog with focus trapping, Escape to close and focus restore. */
-export function Dialog({ title, onClose, children, footer, width = 460, modal, testId }: DialogProps) {
+export function Dialog({ title, onClose, children, footer, width = 460, modal, testId, placement = 'center' }: DialogProps) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
@@ -47,7 +49,7 @@ export function Dialog({ title, onClose, children, footer, width = 460, modal, t
   }, [onClose, modal]);
   const id = `dlg-${title.replace(/\W+/g, '-')}`;
   return (
-    <div className="dialog-backdrop" onPointerDown={(e) => e.target === e.currentTarget && !modal && onClose()}>
+    <div className={`dialog-backdrop${placement === 'side' ? ' is-side' : ''}`} onPointerDown={(e) => e.target === e.currentTarget && !modal && placement !== 'side' && onClose()}>
       <div className="dialog" role="dialog" aria-modal="true" aria-labelledby={id} style={{ width }} ref={ref} data-testid={testId}>
         <header className="dialog-header">
           <h1 id={id}>{title}</h1>

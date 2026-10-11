@@ -2,6 +2,7 @@ import { TOOL_COMMANDS } from '../../renderer/commands';
 import { useEditor } from '../../renderer/state/editor-store';
 import { Checkbox, NumberField, Select, Slider } from '../controls';
 import type { ToolId } from '../../editor/tools';
+import { DITHER_LABELS, type DitherMode } from '../../raster/gradient';
 
 const SIZED: ToolId[] = ['pencil', 'brush', 'eraser', 'line', 'rect', 'ellipse'];
 const SHAPED: ToolId[] = ['pencil', 'eraser', 'line', 'rect', 'ellipse'];
@@ -46,6 +47,31 @@ export function ToolOptionsBar() {
           <NumberField label="Tolerância" value={o.tolerance} min={0} max={100} onChange={(tolerance) => set({ tolerance })} suffix="%" data-testid="opt-tolerance" />
           <Checkbox label="Contíguo" checked={o.contiguous} onChange={(contiguous) => set({ contiguous })} hint="Desmarcado: afeta todos os pixels de cor parecida no quadro, conectados ou não." />
           <Checkbox label="Amostrar composição visível" checked={o.sampleMerged} onChange={(sampleMerged) => set({ sampleMerged })} hint="Usa as cores de todas as camadas visíveis para decidir a área." />
+        </>
+      )}
+      {tool === 'gradient' && (
+        <>
+          <Select
+            label="Forma"
+            value={o.gradientShape}
+            options={[
+              { value: 'linear', label: 'Linear' },
+              { value: 'radial', label: 'Radial' },
+            ]}
+            onChange={(gradientShape) => set({ gradientShape })}
+          />
+          <Select
+            label="Pontilhado"
+            value={o.dither}
+            options={(Object.keys(DITHER_LABELS) as DitherMode[]).map((value) => ({ value, label: DITHER_LABELS[value] }))}
+            onChange={(dither) => set({ dither })}
+          />
+        </>
+      )}
+      {tool === 'text' && (
+        <>
+          <NumberField label="Escala" value={o.textScale} min={1} max={16} onChange={(textScale) => set({ textScale })} suffix="×" />
+          <NumberField label="Espaçamento" value={o.letterSpacing} min={0} max={16} onChange={(letterSpacing) => set({ letterSpacing })} suffix="px" />
         </>
       )}
       {tool === 'eyedropper' && (

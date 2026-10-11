@@ -24,6 +24,7 @@ function renderSettings(p: Preferences): RenderSettings {
     gridColor: p.gridColor,
     tileGrid: p.tileGrid,
     tileGridColor: p.tileGridColor,
+    tiledPreview: p.tiledPreview,
     checkerA: p.checkerA,
     checkerB: p.checkerB,
     checkerSize: p.checkerSize,
@@ -51,6 +52,7 @@ function makeHost(r: CanvasRenderer): ToolHost {
       if (p.selectionOffset !== undefined) r.overlay.selectionOffset = p.selectionOffset;
       r.request();
     },
+    requestText: (at) => useEditor.getState().openDialog({ type: 'text', x: at.x, y: at.y }),
   };
 }
 

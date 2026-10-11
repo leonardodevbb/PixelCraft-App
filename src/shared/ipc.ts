@@ -85,7 +85,7 @@ export interface PixelCraftApi {
      * Writes a companion file next to a granted file, same base name with
      * another extension (e.g. sprites.png → sprites.json). Only 'json'.
      */
-    writeSibling(path: string, extension: 'json', data: Uint8Array): Promise<WriteResult>;
+    writeSibling(path: string, extension: 'json' | 'tmj', data: Uint8Array): Promise<WriteResult>;
     chooseDirectory(title?: string): Promise<string | null>;
     /** Writes a file named `name` (no directories) inside a granted directory. */
     writeInDirectory(dir: string, name: string, data: Uint8Array): Promise<WriteResult>;

@@ -102,6 +102,8 @@ export const TOOL_COMMANDS: { tool: ToolId; label: string; keys: string[]; hint:
   { tool: 'select-lasso', label: 'Laço', keys: ['Q'], hint: 'Desenhe o contorno à mão livre. Shift adiciona, Alt subtrai.' },
   { tool: 'magic-wand', label: 'Varinha mágica', keys: ['W'], hint: 'Seleciona cores parecidas. Shift adiciona, Alt subtrai.' },
   { tool: 'move', label: 'Mover', keys: ['V'], hint: 'Move a seleção (ou a camada). Alt duplica, Ctrl move só o contorno. Setas: 1 px.' },
+  { tool: 'text', label: 'Texto', keys: ['T'], hint: 'Clique onde o texto começa. Fonte bitmap PixelCraft Sans 5×7 com acentos.' },
+  { tool: 'gradient', label: 'Degradê', keys: ['Shift+G'], hint: 'Arraste da cor primária para a secundária. Preenche a seleção ou a camada. Shift trava o ângulo.' },
   { tool: 'eyedropper', label: 'Conta-gotas', keys: ['I'], hint: 'Clique para pegar a cor. Alt com outra ferramenta também funciona.' },
   { tool: 'pan', label: 'Mão (mover vista)', keys: ['H'], hint: 'Arraste para mover a vista. Espaço também funciona.' },
 ];
@@ -118,6 +120,7 @@ export function registerCommands(): void {
     { id: 'file.importSheet', label: 'Importar spritesheet…', category: 'Arquivo', run: () => void importSpritesheet() },
     { id: 'file.exportGif', label: 'Exportar GIF animado…', category: 'Arquivo', keys: ['Ctrl+Alt+G'], run: () => ed().openDialog({ type: 'export-gif' }), enabled: hasDoc },
     { id: 'file.exportSheet', label: 'Exportar spritesheet…', category: 'Arquivo', keys: ['Ctrl+Alt+S'], run: () => ed().openDialog({ type: 'export-spritesheet' }), enabled: hasDoc },
+    { id: 'file.exportTileset', label: 'Exportar tileset…', category: 'Arquivo', run: () => ed().openDialog({ type: 'tileset' }), enabled: hasDoc },
     { id: 'file.exportSequence', label: 'Exportar sequência de PNG…', category: 'Arquivo', run: () => ed().openDialog({ type: 'export-sequence' }), enabled: hasDoc },
     { id: 'file.close', label: 'Fechar projeto', category: 'Arquivo', keys: ['Ctrl+W'], run: () => closeProject(), enabled: hasDoc },
     { id: 'file.newWindow', label: 'Nova janela', category: 'Arquivo', run: () => api.app.newWindow() },
@@ -378,6 +381,21 @@ export function registerCommands(): void {
       keys: ["Ctrl+Shift+'"],
       run: () => prefs().set({ tileGrid: !prefs().prefs.tileGrid }),
       checked: () => prefs().prefs.tileGrid,
+    },
+    {
+      id: 'view.tiledPreview',
+      label: 'Mosaico (repetir a imagem ao redor)',
+      category: 'Visualizar',
+      keys: ['Ctrl+Shift+T'],
+      run: () => prefs().set({ tiledPreview: !prefs().prefs.tiledPreview }),
+      checked: () => prefs().prefs.tiledPreview,
+    },
+    {
+      id: 'image.tiles',
+      label: 'Tiles e tileset…',
+      category: 'Imagem',
+      run: () => ed().openDialog({ type: 'tileset' }),
+      enabled: hasDoc,
     },
     {
       id: 'view.rightPanel',

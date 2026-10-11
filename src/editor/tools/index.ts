@@ -2,6 +2,7 @@ import { eyedropperTool } from './eyedropper';
 import { bucketTool, lassoTool, magicWandTool, moveTool, rectSelectTool } from './fill-select-tools';
 import { brushTool, eraserTool, pencilTool } from './paint-tools';
 import { ellipseFilledTool, ellipseTool, lineTool, rectFilledTool, rectTool } from './shape-tools';
+import { gradientTool, textTool } from './text-gradient-tools';
 import type { Tool, ToolId } from './types';
 
 export * from './types';
@@ -21,6 +22,8 @@ const TOOLS: Tool[] = [
   lassoTool,
   magicWandTool,
   moveTool,
+  textTool,
+  gradientTool,
 ];
 
 const BY_ID = new Map<ToolId, Tool>(TOOLS.map((t) => [t.id, t]));

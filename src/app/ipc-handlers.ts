@@ -157,7 +157,7 @@ export function registerIpc(deps: HandlerDeps): void {
 
   handle(IPC.writeSibling, async (_e, path: unknown, ext: unknown, data: unknown): Promise<WriteResult> => {
     const p = pathArg.parse(path);
-    const x = z.enum(['json']).parse(ext);
+    const x = z.enum(['json', 'tmj']).parse(ext);
     const bytes = bytesArg.parse(data);
     if (!grants.hasFile(p)) throw new Error('Acesso negado: escolha o local do arquivo pelo diálogo de salvamento.');
     const sib = join(dirname(p), `${basename(p, extname(p))}.${x}`);

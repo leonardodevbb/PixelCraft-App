@@ -23,6 +23,8 @@ export interface RenderSettings {
   gridColor: string;
   tileGrid: boolean;
   tileGridColor: string;
+  /** Draws faded copies of the image around it (seamless tile check). */
+  tiledPreview?: boolean;
   checkerA: string;
   checkerB: string;
   /** Checker cell size in screen pixels. */
@@ -252,6 +254,14 @@ export class CanvasRenderer {
     }
     ctx.fillRect(offsetX, offsetY, w, h);
     ctx.restore();
+
+    if (this.settings.tiledPreview) {
+      ctx.save();
+      ctx.globalAlpha = 0.6;
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++) if (dx || dy) ctx.drawImage(this.compositeCanvas, offsetX + dx * w, offsetY + dy * h, w, h);
+      ctx.restore();
+    }
 
     const onion = this.onionLayer();
     if (onion) ctx.drawImage(onion, offsetX, offsetY, w, h);

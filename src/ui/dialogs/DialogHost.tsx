@@ -12,6 +12,8 @@ import { PromptDialog } from './PromptDialog';
 import { CommandPalette } from './CommandPalette';
 import { ImportSpritesheetDialog } from './ImportSpritesheetDialog';
 import { AnimationExportDialog } from './AnimationExportDialog';
+import { TextDialog } from './TextDialog';
+import { TilesDialog } from './TilesDialog';
 
 export function DialogHost() {
   const d = useEditor((s) => s.dialog);
@@ -55,6 +57,10 @@ export function DialogHost() {
       return <CommandPalette />;
     case 'preferences':
       return <PreferencesDialog />;
+    case 'tileset':
+      return <TilesDialog />;
+    case 'text':
+      return <TextDialog x={d.x} y={d.y} />;
     default:
       return null;
   }

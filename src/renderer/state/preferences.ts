@@ -10,6 +10,8 @@ export const preferencesSchema = z.object({
   pixelGridMinZoom: z.number().min(2).max(64).catch(8),
   gridColor: z.string().max(40).catch('rgba(255,255,255,0.16)'),
   tileGrid: z.boolean().catch(false),
+  /** Repeats the image around the canvas to check seamless tiles. */
+  tiledPreview: z.boolean().catch(false),
   tileGridColor: z.string().max(40).catch('rgba(46,196,182,0.55)'),
   checkerA: z.string().max(40).catch('#3a3646'),
   checkerB: z.string().max(40).catch('#2c2936'),

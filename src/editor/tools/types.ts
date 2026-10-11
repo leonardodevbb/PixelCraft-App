@@ -1,5 +1,6 @@
 import type { RGBA } from '../../raster/color';
 import type { BrushShape } from '../../raster/shapes';
+import type { DitherMode, GradientShape } from '../../raster/gradient';
 import type { EditorSession } from '../session';
 import type { Point, Rect } from '../../raster/rect';
 
@@ -46,6 +47,13 @@ export interface ToolOptions {
   tolerance: number;
   contiguous: boolean;
   sampleMerged: boolean;
+  gradientShape: GradientShape;
+  dither: DitherMode;
+  /** Text tool: integer pixel scale, letter and line spacing, alignment. */
+  textScale: number;
+  letterSpacing: number;
+  lineSpacing: number;
+  textAlign: 'left' | 'center' | 'right';
 }
 
 export const DEFAULT_TOOL_OPTIONS: ToolOptions = {
@@ -55,6 +63,12 @@ export const DEFAULT_TOOL_OPTIONS: ToolOptions = {
   tolerance: 0,
   contiguous: true,
   sampleMerged: false,
+  gradientShape: 'linear',
+  dither: 'bayer4',
+  textScale: 1,
+  letterSpacing: 1,
+  lineSpacing: 1,
+  textAlign: 'left',
 };
 
 /** Transient visuals a tool can ask the canvas to draw. */
@@ -75,6 +89,8 @@ export interface ToolHost {
   /** Symmetry enabled for this stroke (from document settings + UI toggle). */
   symmetryActive: boolean;
   preview(p: ToolPreview): void;
+  /** Text tool: asks the UI to open the text editor at a pixel. */
+  requestText?(at: Point): void;
 }
 
 export interface Tool {
