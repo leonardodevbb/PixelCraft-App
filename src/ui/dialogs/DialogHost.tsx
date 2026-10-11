@@ -9,6 +9,8 @@ import { LayerPropertiesDialog } from './LayerPropertiesDialog';
 import { PaletteToolsDialog } from './PaletteToolsDialog';
 import { PreferencesDialog } from './PreferencesDialog';
 import { PromptDialog } from './PromptDialog';
+import { CommandPalette } from './CommandPalette';
+import { ImportSpritesheetDialog } from './ImportSpritesheetDialog';
 import { AnimationExportDialog } from './AnimationExportDialog';
 
 export function DialogHost() {
@@ -47,6 +49,10 @@ export function DialogHost() {
       return <AnimationExportDialog kind="sequence" />;
     case 'export-spritesheet':
       return <AnimationExportDialog kind="spritesheet" />;
+    case 'import-spritesheet':
+      return <ImportSpritesheetDialog file={d.file} />;
+    case 'command-palette':
+      return <CommandPalette />;
     case 'preferences':
       return <PreferencesDialog />;
     default:

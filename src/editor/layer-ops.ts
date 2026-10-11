@@ -334,7 +334,7 @@ export function layerFromSelection(s: EditorSession, cut: boolean): LayerId {
 }
 
 /** Inserts a full-size image as a new layer on the active frame (paste/import as layer). */
-export function addLayerWithImage(s: EditorSession, name: string, img: PixelBuffer, x = 0, y = 0): LayerId {
+export function addLayerWithImage(s: EditorSession, name: string, img: PixelBuffer, x = 0, y = 0, label = 'Colar em nova camada'): LayerId {
   s.cancelDraft();
   const st = s.state;
   assertRoom(st);
@@ -344,6 +344,6 @@ export function addLayerWithImage(s: EditorSession, name: string, img: PixelBuff
   const ni = s.addImage(full);
   const slot = slotAboveActive(s);
   const next = { ...st, layers: insertLayer(st.layers, layer, slot), cels: { ...st.cels, [celKey(layer.id, s.activeFrameId)]: ni } };
-  s.commit('Colar em nova camada', next, [], [ni], { ...s.context, layerId: layer.id });
+  s.commit(label, next, [], [ni], { ...s.context, layerId: layer.id });
   return layer.id;
 }

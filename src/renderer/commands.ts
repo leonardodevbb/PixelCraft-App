@@ -51,6 +51,7 @@ import {
 import { findLayer } from '../project/model';
 import { panelRows } from '../layers/tree';
 import { exportPaletteFile, importPaletteFile } from '../ui/panels/PalettePanel';
+import { importImageAsLayer, importSpritesheet } from './actions/import';
 
 export const commands = new CommandRegistry();
 
@@ -112,7 +113,9 @@ export function registerCommands(): void {
     { id: 'file.open', label: 'Abrir…', category: 'Arquivo', keys: ['Ctrl+O'], run: () => openProjectDialog() },
     { id: 'file.save', label: 'Salvar', category: 'Arquivo', keys: ['Ctrl+S'], run: () => void save(), enabled: hasDoc },
     { id: 'file.saveAs', label: 'Salvar como…', category: 'Arquivo', keys: ['Ctrl+Shift+S'], run: () => void saveAs(), enabled: hasDoc },
-    { id: 'file.exportPng', label: 'Exportar PNG…', category: 'Arquivo', keys: ['Ctrl+Shift+E'], run: () => ed().openDialog({ type: 'export-png' }), enabled: hasDoc },
+    { id: 'file.exportPng', label: 'Exportar imagem (PNG, JPEG, WebP, BMP)…', category: 'Arquivo', keys: ['Ctrl+Shift+E'], run: () => ed().openDialog({ type: 'export-png' }), enabled: hasDoc },
+    { id: 'file.importLayer', label: 'Importar imagem como camada…', category: 'Arquivo', keys: ['Ctrl+Shift+O'], run: () => void importImageAsLayer(), enabled: hasDoc },
+    { id: 'file.importSheet', label: 'Importar spritesheet…', category: 'Arquivo', run: () => void importSpritesheet() },
     { id: 'file.exportGif', label: 'Exportar GIF animado…', category: 'Arquivo', keys: ['Ctrl+Alt+G'], run: () => ed().openDialog({ type: 'export-gif' }), enabled: hasDoc },
     { id: 'file.exportSheet', label: 'Exportar spritesheet…', category: 'Arquivo', keys: ['Ctrl+Alt+S'], run: () => ed().openDialog({ type: 'export-spritesheet' }), enabled: hasDoc },
     { id: 'file.exportSequence', label: 'Exportar sequência de PNG…', category: 'Arquivo', run: () => ed().openDialog({ type: 'export-sequence' }), enabled: hasDoc },
@@ -412,6 +415,7 @@ export function registerCommands(): void {
     { id: 'color.reset', label: 'Restaurar cores padrão', category: 'Cores', keys: ['D'], run: () => ed().resetColors() },
 
     // Help
+    { id: 'help.commandPalette', label: 'Paleta de comandos…', category: 'Ajuda', keys: ['Ctrl+K', 'Ctrl+Shift+P'], run: () => ed().openDialog({ type: 'command-palette' }) },
     { id: 'help.shortcuts', label: 'Atalhos de teclado', category: 'Ajuda', keys: ['F1'], run: () => ed().openDialog({ type: 'shortcuts' }) },
     { id: 'help.docs', label: 'Documentação online', category: 'Ajuda', run: () => api.app.openDocs('readme') },
     { id: 'help.about', label: 'Sobre o PixelCraft', category: 'Ajuda', run: () => ed().openDialog({ type: 'about' }) },

@@ -468,3 +468,88 @@
 .frame-new {
   border-style: dashed;
 }
+.slice-preview {
+  flex: none;
+  border: 1px solid var(--border);
+}
+.slice-preview canvas {
+  display: block;
+}
+
+/* ---------- command palette & shortcuts ---------- */
+.palette-backdrop {
+  align-items: flex-start;
+  padding-top: 12vh;
+}
+.command-palette {
+  width: min(620px, 92vw);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 8px;
+}
+.command-palette .search {
+  width: 100%;
+}
+.command-results {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.command-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+}
+.command-item.is-selected {
+  background: color-mix(in srgb, var(--accent) 22%, var(--panel-2));
+}
+.command-item.is-disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.command-cat {
+  flex: none;
+  width: 86px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.command-label {
+  flex: 1;
+}
+.command-empty {
+  padding: 8px;
+}
+.conflict-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px;
+  margin-bottom: 8px;
+  border: 1px solid var(--yellow);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+.kbd-remove {
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 0 0 4px;
+  font-size: 11px;
+}
+.kbd-remove:hover {
+  color: var(--danger);
+}
+.link-btn.is-recording {
+  color: var(--yellow);
+  font-weight: 600;
+}

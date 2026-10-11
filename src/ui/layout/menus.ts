@@ -5,7 +5,7 @@ export function buildMenus(): MenuDef[] {
   return [
     {
       label: 'Arquivo',
-      items: ['file.new', 'file.open', '-', 'file.save', 'file.saveAs', '-', 'file.exportPng', 'file.exportGif', 'file.exportSheet', 'file.exportSequence', '-', 'file.newWindow', 'file.close'],
+      items: ['file.new', 'file.open', '-', 'file.save', 'file.saveAs', '-', 'file.importLayer', 'file.importSheet', '-', 'file.exportPng', 'file.exportGif', 'file.exportSheet', 'file.exportSequence', '-', 'file.newWindow', 'file.close'],
     },
     {
       label: 'Editar',
@@ -136,7 +136,7 @@ export function buildMenus(): MenuDef[] {
     },
     {
       label: 'Ajuda',
-      items: ['help.shortcuts', 'help.docs', '-', 'help.about'],
+      items: ['help.commandPalette', 'help.shortcuts', 'help.docs', '-', 'help.about'],
     },
   ];
 }

@@ -1,10 +1,11 @@
 import { EditorSession } from '../../editor/session';
-import { createDocument, type NewDocumentOptions } from '../../project/create';
+import { createDocument, documentFromFrames, type NewDocumentOptions } from '../../project/create';
 import { LIMITS } from '../../project/limits';
 import { celKey, type ProjectDocument } from '../../project/model';
 import { deserializeProject, ProjectFormatError, serializeProject } from '../../project/serialize';
 import { composeFrame } from '../../layers/compose';
 import { decodeImage, sniffImageType } from '../../import-export/browser-decode';
+import { decodeGif } from '../../import-export/gif';
 import { encodePng } from '../../import-export/png';
 import { resizeNearest } from '../../raster/scale';
 import { newId } from '../../project/ids';
@@ -91,6 +92,18 @@ export async function openBytes(path: string, name: string, data: Uint8Array): P
   const prev = store.session;
   store.setBusy('Abrindo…');
   try {
+    if (sniffImageType(data) === 'gif') {
+      const frames = decodeGif(data, { maxPixels: LIMITS.maxPixels, maxFrames: LIMITS.maxFrames });
+      if (frames.length > 1) {
+        const first = frames[0]!.image;
+        if (first.width > LIMITS.maxDimension || first.height > LIMITS.maxDimension) throw new Error(`A imagem excede ${LIMITS.maxDimension}×${LIMITS.maxDimension} pixels.`);
+        const doc = documentFromFrames(stripExt(name), frames.map((f) => ({ image: f.image, duration: f.delayMs })));
+        if (prev) await discardRecovery(prev);
+        activate(doc, null, { dirty: true });
+        store.toast('success', `GIF "${name}" aberto com ${frames.length} quadros (${first.width}×${first.height}).`);
+        return;
+      }
+    }
     if (sniffImageType(data)) {
       const img = await decodeImage(data, LIMITS.maxPixels);
       if (img.width > LIMITS.maxDimension || img.height > LIMITS.maxDimension) {
