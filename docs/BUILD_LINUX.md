@@ -7,7 +7,7 @@ O PixelCraft é distribuído em três formatos. Os três contêm o mesmo aplicat
 |---|---|---|---|
 | Debian/Ubuntu | `npm run package:deb` | `release/pixelcraft_<versão>_amd64.deb` | Gerado, instalado, executado e removido no ambiente de desenvolvimento (Ubuntu 24.04) |
 | AppImage | `npm run package:appimage` | `release/PixelCraft-<versão>-x86_64.AppImage` | Gerado, extraído e executado no ambiente de desenvolvimento |
-| Flatpak | `npm run package:flatpak` | `release/PixelCraft-<versão>.flatpak` | Configurado (manifesto, metainfo, script e CI); **ainda não gerado**, ver abaixo |
+| Flatpak | `npm run package:flatpak` | `release/PixelCraft-<versão>.flatpak` | Gerado, instalado (por usuário) e iniciado no GitHub Actions; ver abaixo |
 
 `npm run package:all` gera os três em sequência. `npm run verify:packages`
 confere o que estiver em `release/` (veja [Verificação](#verificação)).
@@ -89,13 +89,13 @@ flatpak install --user release/PixelCraft-0.1.0.flatpak
 flatpak run io.github.leonardodevbb.PixelCraft
 ```
 
-**Por que ainda não foi gerado:** no ambiente onde o projeto foi desenvolvido,
-`dl.flathub.org` é bloqueado pela política de rede, então o runtime e a base do
-Electron não puderam ser baixados. O manifesto foi validado com
-`flatpak-builder --show-manifest`; o `.desktop` com `desktop-file-validate`; o
-metainfo com `appstreamcli validate`. O job `packages` do GitHub Actions
-(`.github/workflows/ci.yml`) roda `scripts/build-flatpak.sh` num runner com
-acesso ao Flathub e publica o `.flatpak` como artefato.
+**Onde é gerado:** no ambiente onde o projeto foi desenvolvido,
+`dl.flathub.org` é bloqueado pela política de rede, então o Flatpak é gerado no
+job `packages` do GitHub Actions (`.github/workflows/ci.yml`). Esse job roda
+`scripts/build-flatpak.sh`, depois `scripts/verify-packages.sh --smoke
+--flatpak-run`, que instala o pacote para o usuário do runner e o inicia
+(`PIXELCRAFT_SMOKE_OK 0.1.0 flatpak`), e publica o `.flatpak` como artefato
+`pixelcraft-linux`.
 
 ## Verificação
 

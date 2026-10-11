@@ -10,7 +10,7 @@ As seis fases do plano inicial foram implementadas:
 | 2. Editor completo | Balde, seleções, transformações, simetria, camadas e grupos, paletas, autosave, preferências | Pronta e testada |
 | 3. Animação | Linha do tempo, durações, reprodução, papel vegetal, GIF, spritesheet, sequência de PNG | Pronta e testada |
 | 4. Recursos avançados | Texto, degradê, tiles e tileset, importações, mais formatos, paleta de comandos, atalhos configuráveis | Pronta e testada |
-| 5. Distribuição | .deb, AppImage, Flatpak | .deb e AppImage gerados e testados; Flatpak configurado (veja abaixo) |
+| 5. Distribuição | .deb, AppImage, Flatpak | Os três gerados e iniciados; .deb e AppImage também aqui, Flatpak no CI |
 | 6. Estabilização | Acessibilidade, documentos grandes, recuperação, memória, primeiros passos, documentação | Pronta e testada |
 
 ## Limitações conhecidas
@@ -18,10 +18,10 @@ As seis fases do plano inicial foram implementadas:
 Estas partes do pedido original não foram feitas, ou foram feitas de forma
 mais simples:
 
-* **Flatpak ainda não gerado.** Manifesto, metainfo, .desktop e script estão
-  prontos e validados, mas o Flathub estava bloqueado no ambiente de
-  desenvolvimento. O CI do GitHub gera o pacote (veja
-  [BUILD_LINUX.md](BUILD_LINUX.md#flatpak)).
+* **Flatpak só gerado no CI.** O Flathub estava bloqueado no ambiente de
+  desenvolvimento. O CI do GitHub gera, instala e inicia o pacote (veja
+  [BUILD_LINUX.md](BUILD_LINUX.md#flatpak)); a suíte de interface ainda não
+  roda contra ele.
 * **Transformação livre na tela.** Girar e espelhar a seleção funcionam em
   passos de 90°. Escalar a seleção usa um diálogo com vizinho mais próximo.
   Não há alças de transformação no canvas nem rotação em ângulo livre.
