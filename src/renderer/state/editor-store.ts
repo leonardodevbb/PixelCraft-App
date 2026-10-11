@@ -20,6 +20,7 @@ export type DialogState =
   | { type: 'resize-content' }
   | { type: 'document-properties' }
   | { type: 'export-gif' }
+  | { type: 'export-apng' }
   | { type: 'export-spritesheet' }
   | { type: 'export-sequence' }
   | { type: 'import-image'; file: { name: string; data: Uint8Array } }

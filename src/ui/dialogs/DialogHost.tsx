@@ -52,6 +52,8 @@ export function DialogHost() {
       return <PaletteToolsDialog />;
     case 'export-gif':
       return <AnimationExportDialog kind="gif" />;
+    case 'export-apng':
+      return <AnimationExportDialog kind="apng" />;
     case 'export-sequence':
       return <AnimationExportDialog kind="sequence" />;
     case 'export-spritesheet':

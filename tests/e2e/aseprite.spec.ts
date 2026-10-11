@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
-import { launch, pixelToPage, quit } from './fixtures';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { launch, pixelToPage, quit, stubOpenDialog, stubSaveDialog } from './fixtures';
 
 interface Snapshot {
   selection: { x: number; y: number; w: number; h: number; area: number } | null;
@@ -7,6 +9,9 @@ interface Snapshot {
   tool: string;
   frames: number;
   activeFrame: number;
+  layerNames: string[];
+  path: string | null;
+  dirty: boolean;
 }
 
 type Hook = { __pixelcraft: { pixel(x: number, y: number): number; state(): Snapshot } };
@@ -130,6 +135,58 @@ test('animation tags, frame range selection and copy/paste of frames', async () 
   await page.getByTestId('tag-band-start').click();
   await page.getByTestId('tag-delete').click();
   await expect(page.getByTestId('tag-band-start')).toHaveCount(0);
+
+  await quit(app);
+});
+
+async function runCommand(page: Page, query: string): Promise<void> {
+  await page.keyboard.press('Control+k');
+  await page.getByTestId('command-input').fill(query);
+  await page.getByTestId('command-input').press('Enter');
+  await expect(page.getByTestId('command-palette')).toBeHidden();
+}
+
+test('exports to .aseprite and opens it back, plus APNG and SVG', async () => {
+  const { app, page, home } = await launch();
+  await newDoc(page, 8, 8);
+  await page.getByTestId('tool-pencil').click();
+  await page.getByTestId('palette-10').click();
+  const p = await pixelToPage(page, 3, 4);
+  await page.mouse.click(p.x, p.y);
+  await page.getByTestId('frame-add').click();
+
+  const ase = join(home, 'heroi.aseprite');
+  await stubSaveDialog(app, ase);
+  await runCommand(page, 'aseprite');
+  await expect(page.getByTestId('toast-success').filter({ hasText: '.aseprite' })).toBeVisible();
+  const bytes = readFileSync(ase);
+  expect(bytes.readUInt16LE(4)).toBe(0xa5e0);
+
+  const svg = join(home, 'heroi.svg');
+  await stubSaveDialog(app, svg);
+  await runCommand(page, 'svg');
+  await expect(page.getByTestId('toast-success').filter({ hasText: 'SVG' })).toBeVisible();
+  expect(readFileSync(svg, 'utf8')).toContain('<svg');
+
+  const apng = join(home, 'heroi.png');
+  await stubSaveDialog(app, apng);
+  await runCommand(page, 'apng');
+  await page.getByTestId('anim-export-confirm').click();
+  await expect(page.getByTestId('toast-success').filter({ hasText: 'animado' })).toBeVisible();
+  expect(readFileSync(apng).includes(Buffer.from('acTL'))).toBe(true);
+
+  // Open it back: a new unsaved document with the same pixel and frames.
+  await page.keyboard.press('Control+w');
+  const discard = page.getByRole('button', { name: 'Descartar alterações' });
+  if (await discard.isVisible().catch(() => false)) await discard.click();
+  await stubOpenDialog(app, [ase]);
+  await page.keyboard.press('Control+o');
+  await expect(page.getByTestId('toast-success').filter({ hasText: 'aberto do Aseprite' })).toBeVisible();
+  const st = await state(page);
+  expect(st.frames).toBe(2);
+  expect(st.path).toBeNull();
+  expect(st.dirty).toBe(true);
+  expect(await pixel(page, 3, 4)).toBe(0xe8434fff);
 
   await quit(app);
 });

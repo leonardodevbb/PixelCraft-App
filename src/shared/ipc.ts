@@ -155,7 +155,10 @@ export const IPC = {
 } as const;
 
 export const FILE_FILTERS: Record<FileKind, { name: string; extensions: string[] }[]> = {
-  project: [{ name: 'Projeto PixelCraft', extensions: ['pixelcraft'] }],
+  project: [
+    { name: 'Projeto PixelCraft', extensions: ['pixelcraft'] },
+    { name: 'Arquivo do Aseprite', extensions: ['aseprite', 'ase'] },
+  ],
   image: [
     { name: 'Imagens', extensions: ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif'] },
     { name: 'PNG', extensions: ['png'] },

@@ -24,7 +24,10 @@ Gestos que não são comandos:
 | Importar imagem como camada… | <kbd>Ctrl+Shift+O</kbd> |
 | Importar spritesheet… | — |
 | Exportar GIF animado… | <kbd>Ctrl+Alt+G</kbd> |
+| Exportar PNG animado (APNG)… | — |
+| Exportar quadro como SVG… | — |
 | Exportar spritesheet… | <kbd>Ctrl+Alt+S</kbd> |
+| Exportar para o Aseprite (.aseprite)… | — |
 | Exportar tileset… | — |
 | Exportar sequência de PNG… | — |
 | Abrir recentes… | <kbd>Ctrl+Shift+R</kbd> |

@@ -5,7 +5,7 @@ export function buildMenus(): MenuDef[] {
   return [
     {
       label: 'Arquivo',
-      items: ['file.new', 'file.open', 'file.recent', '-', 'file.save', 'file.saveAs', '-', 'file.importLayer', 'file.importSheet', '-', 'file.exportPng', 'file.exportGif', 'file.exportSheet', 'file.exportSequence', 'file.exportTileset', '-', 'file.properties', '-', 'file.newWindow', 'file.close'],
+      items: ['file.new', 'file.open', 'file.recent', '-', 'file.save', 'file.saveAs', '-', 'file.importLayer', 'file.importSheet', '-', 'file.exportPng', 'file.exportSvg', 'file.exportGif', 'file.exportApng', 'file.exportSheet', 'file.exportSequence', 'file.exportTileset', 'file.exportAseprite', '-', 'file.properties', '-', 'file.newWindow', 'file.close'],
     },
     {
       label: 'Editar',

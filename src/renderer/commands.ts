@@ -3,7 +3,8 @@ import type { ToolId } from '../editor/tools';
 import { api } from './api';
 import { useEditor } from './state/editor-store';
 import { usePrefs } from './state/preferences';
-import { closeProject, openProjectDialog, save, saveAs } from './actions/documents';
+import { closeProject, exportAseprite, openProjectDialog, save, saveAs } from './actions/documents';
+import { exportSvg } from './actions/export';
 import { moveSelected } from '../editor/selection-ops';
 import { centerView, fitView, zoomStep, zoomTo } from './actions/view';
 import { attempt, copy, cut, deleteSelection, nudge, paste, selectAll } from './actions/edit';
@@ -136,7 +137,10 @@ export function registerCommands(): void {
     { id: 'file.importLayer', label: 'Importar imagem como camada…', category: 'Arquivo', keys: ['Ctrl+Shift+O'], run: () => void importImageAsLayer(), enabled: hasDoc },
     { id: 'file.importSheet', label: 'Importar spritesheet…', category: 'Arquivo', run: () => void importSpritesheet() },
     { id: 'file.exportGif', label: 'Exportar GIF animado…', category: 'Arquivo', keys: ['Ctrl+Alt+G'], run: () => ed().openDialog({ type: 'export-gif' }), enabled: hasDoc },
+    { id: 'file.exportApng', label: 'Exportar PNG animado (APNG)…', category: 'Arquivo', run: () => ed().openDialog({ type: 'export-apng' }), enabled: hasDoc },
+    { id: 'file.exportSvg', label: 'Exportar quadro como SVG…', category: 'Arquivo', run: () => void exportSvg(), enabled: hasDoc },
     { id: 'file.exportSheet', label: 'Exportar spritesheet…', category: 'Arquivo', keys: ['Ctrl+Alt+S'], run: () => ed().openDialog({ type: 'export-spritesheet' }), enabled: hasDoc },
+    { id: 'file.exportAseprite', label: 'Exportar para o Aseprite (.aseprite)…', category: 'Arquivo', run: () => void exportAseprite(), enabled: hasDoc },
     { id: 'file.exportTileset', label: 'Exportar tileset…', category: 'Arquivo', run: () => ed().openDialog({ type: 'tileset' }), enabled: hasDoc },
     { id: 'file.exportSequence', label: 'Exportar sequência de PNG…', category: 'Arquivo', run: () => ed().openDialog({ type: 'export-sequence' }), enabled: hasDoc },
     { id: 'file.recent', label: 'Abrir recentes…', category: 'Arquivo', keys: ['Ctrl+Shift+R'], run: () => ed().openDialog({ type: 'recent' }) },

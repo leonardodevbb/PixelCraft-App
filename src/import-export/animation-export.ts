@@ -5,7 +5,7 @@ import type { RGBA } from '../raster/color';
 import type { PixelBuffer } from '../raster/pixel-buffer';
 import { encodeGif, type GifEncodeOptions, type GifEncodeReport, type GifFrameIn } from './gif';
 import { renderFrameForExport } from './export-image';
-import { encodePng } from './png';
+import { encodeApng, encodePng, type ApngFrame } from './png';
 import { buildSpritesheet, frameTags, spritesheetJson, type SheetOptions } from './spritesheet';
 
 /** 'all' or the id of an animation tag. */
@@ -56,6 +56,27 @@ export function prepareGif(state: DocState, lookup: ImageLookup, o: GifExportOpt
 export function exportGif(state: DocState, lookup: ImageLookup, o: GifExportOptions): GifEncodeReport & { frameCount: number } {
   const { frames, options } = prepareGif(state, lookup, o);
   return { ...encodeGif(frames, options), frameCount: frames.length };
+}
+
+export interface ApngExportOptions {
+  range: FrameRange;
+  scale: number;
+  background: RGBA | null;
+  /** null = play once, 0 = forever, n = total plays. */
+  loop: number | null;
+  generator: string;
+}
+
+/** Frames in playback order for an APNG, which keeps full alpha and exact durations. */
+export function prepareApng(state: DocState, lookup: ImageLookup, o: Omit<ApngExportOptions, 'loop' | 'generator'>): ApngFrame[] {
+  const frames = framesInRange(state, o.range);
+  const images = render(state, lookup, frames, o.scale, o.background);
+  return playbackOrder(frames.length, rangeAnimation(state, o.range)).map((i) => ({ image: images[i]!, delayMs: frames[i]!.duration }));
+}
+
+export function exportApng(state: DocState, lookup: ImageLookup, o: ApngExportOptions): { bytes: Uint8Array; frameCount: number } {
+  const frames = prepareApng(state, lookup, o);
+  return { bytes: encodeApng(frames, { plays: o.loop ?? 1, text: { Software: o.generator } }), frameCount: frames.length };
 }
 
 export interface SequenceFile {

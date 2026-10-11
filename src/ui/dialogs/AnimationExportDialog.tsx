@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { playbackOrder } from '../../animation/playback';
-import { exportSequence, exportSpritesheet, framesInRange, prepareGif, rangeOptions } from '../../import-export/animation-export';
+import { exportApng, exportSequence, exportSpritesheet, framesInRange, prepareGif, rangeAnimation, rangeOptions } from '../../import-export/animation-export';
 import { encodeGifAsync } from '../../import-export/gif-async';
 import { MAX_EXPORT_DIMENSION } from '../../import-export/export-image';
 import { sheetFits, sheetGeometry, type SheetLayout } from '../../import-export/spritesheet';
@@ -11,10 +11,11 @@ import { useEditor } from '../../renderer/state/editor-store';
 import { Button, Checkbox, NumberField, Select } from '../controls';
 import { Dialog } from './Dialog';
 
-export type AnimationExportKind = 'gif' | 'sequence' | 'spritesheet';
+export type AnimationExportKind = 'gif' | 'apng' | 'sequence' | 'spritesheet';
 
 const TITLES: Record<AnimationExportKind, string> = {
   gif: 'Exportar GIF animado',
+  apng: 'Exportar PNG animado (APNG)',
   sequence: 'Exportar sequência de PNG',
   spritesheet: 'Exportar spritesheet',
 };
@@ -52,7 +53,8 @@ export function AnimationExportDialog({ kind }: { kind: AnimationExportKind }) {
   const tooBig = w > MAX_EXPORT_DIMENSION || h > MAX_EXPORT_DIMENSION;
   const geometry = kind === 'spritesheet' ? sheetGeometry(frames.length, st.width, st.height, { layout, columns, padding, margin, scale }) : null;
   const sheetTooBig = !!geometry && !sheetFits(geometry);
-  const gifFrames = kind === 'gif' ? playbackOrder(frames.length, st.animation).length : frames.length;
+  const animated = kind === 'gif' || kind === 'apng';
+  const gifFrames = animated ? playbackOrder(frames.length, rangeAnimation(st, range)).length : frames.length;
   const loop = loopChoice === 'forever' ? 0 : loopChoice === 'once' ? null : Math.max(1, loopCount - 1);
 
   // For small animations, encode in the background to show the real GIF size.
@@ -98,6 +100,15 @@ export function AnimationExportDialog({ kind }: { kind: AnimationExportKind }) {
           label: 'Mostrar na pasta',
           run: () => void api.file.showInFolder(path),
         });
+      } else if (kind === 'apng') {
+        const path = await api.file.saveDialog({ kind: 'image', defaultName: `${name}${scale > 1 ? `@${scale}x` : ''}.png`, title: TITLES.apng, extensions: ['png', 'apng'], filterName: 'PNG animado' });
+        if (!path) return;
+        close();
+        setBusy('Exportando APNG…');
+        // APNG counts total plays; the GIF-style "extra repeats" become plays.
+        const r = exportApng(st, session.lookup, { range, scale, background, loop: loop === null ? null : loop === 0 ? 0 : loop + 1, generator: GENERATOR });
+        await api.file.write(path, r.bytes);
+        toast('success', `PNG animado exportado: ${r.frameCount} quadros, ${formatBytes(r.bytes.length)}.`, { label: 'Mostrar na pasta', run: () => void api.file.showInFolder(path) });
       } else if (kind === 'sequence') {
         const dir = await api.file.chooseDirectory('Pasta para os PNGs');
         if (!dir) return;
@@ -159,7 +170,7 @@ export function AnimationExportDialog({ kind }: { kind: AnimationExportKind }) {
             <input type="color" value={bg} onChange={(e) => setBg(e.target.value)} />
           </label>
         )}
-        {kind === 'gif' && (
+        {animated && (
           <>
             <Select<LoopChoice>
               label="Repetição"
@@ -172,7 +183,7 @@ export function AnimationExportDialog({ kind }: { kind: AnimationExportKind }) {
               onChange={setLoopChoice}
             />
             {loopChoice === 'count' && <NumberField label="Vezes" value={loopCount} min={2} max={1000} onChange={setLoopCount} />}
-            {!solid && (
+            {kind === 'gif' && !solid && (
               <NumberField
                 label="Limite de transparência (alfa)"
                 value={threshold}
@@ -222,8 +233,8 @@ export function AnimationExportDialog({ kind }: { kind: AnimationExportKind }) {
         )}
         <dt>Quadros</dt>
         <dd>
-          {kind === 'gif' && gifFrames !== frames.length ? `${gifFrames} (vai e volta)` : frames.length}
-          {kind === 'gif' && st.animation.direction === 'reverse' ? ', ordem reversa' : ''}
+          {animated && gifFrames !== frames.length ? `${gifFrames} (vai e volta)` : frames.length}
+          {animated && rangeAnimation(st, range).direction === 'reverse' ? ', ordem reversa' : ''}
         </dd>
         {kind === 'gif' && (
           <>
@@ -243,6 +254,12 @@ export function AnimationExportDialog({ kind }: { kind: AnimationExportKind }) {
               Transparência só total ou nenhuma; durações em passos de 10 ms
               {measured?.rounded ? ' (algumas foram arredondadas)' : ''}.
             </dd>
+          </>
+        )}
+        {kind === 'apng' && (
+          <>
+            <dt>Vantagens</dt>
+            <dd>Transparência parcial, todas as cores e durações exatas. Abre em navegadores, Discord e Telegram.</dd>
           </>
         )}
         {kind === 'sequence' && (
