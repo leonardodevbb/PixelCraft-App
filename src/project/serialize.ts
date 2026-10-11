@@ -2,7 +2,7 @@ import { strFromU8, strToU8, unzipSync, zipSync, type Zippable } from 'fflate';
 import { decodePng, encodePng, readPngInfo, PngError } from '../import-export/png';
 import { composeFrame } from '../layers/compose';
 import { parseHex, toHex } from '../raster/color';
-import { PixelBuffer } from '../raster/pixel-buffer';
+import { type PixelBuffer } from '../raster/pixel-buffer';
 import { LIMITS } from './limits';
 import { FormatVersionError, migrateManifest } from './migrations';
 import { CURRENT_FORMAT_VERSION, manifestSchema, type LayerJson, type Manifest } from './schema';
