@@ -22,29 +22,31 @@ mais simples:
   desenvolvimento. O CI do GitHub gera, instala e inicia o pacote (veja
   [BUILD_LINUX.md](BUILD_LINUX.md#flatpak)); a suíte de interface ainda não
   roda contra ele.
-* **Transformação livre na tela.** Girar e espelhar a seleção funcionam em
-  passos de 90°. Escalar a seleção usa um diálogo com vizinho mais próximo.
-  Não há alças de transformação no canvas nem rotação em ângulo livre.
-* **Régua.** Não há réguas nas bordas do canvas. As guias são criadas por
-  posição em Visualizar › Guias e eixos de simetria; o cursor mostra X e Y na
-  barra de status.
-* **Linha do tempo.** Não há seleção de vários quadros ao mesmo tempo nem
-  copiar e colar quadros. Duplicar, mover, marcar e definir a duração de
-  todos os quadros funcionam.
 * **Pré-visualização em janela separada.** A pré-visualização fica no painel
   lateral, não numa janela independente.
 * **Paletas.** Paletas podem ser guardadas com um nome em "Minhas paletas",
   carregadas em qualquer projeto e excluídas. Renomear ou duplicar uma
   paleta já guardada não tem botão próprio.
-* **Texto.** Há uma única fonte bitmap (PixelCraft Sans 5×7, com acentos);
-  não é possível importar outras fontes.
+* **Texto.** Fontes do sistema e TTF/OTF/WOFF carregadas viram pixels sem
+  suavização, mas a fonte carregada vale só até fechar o app (não fica salva
+  no projeto). Não há importação de fontes BDF.
 * **Tiles.** Há grade, mosaico e exportação de tileset com mapa do Tiled. Não
   há um modo de edição de mapa de tiles nem paleta de tiles para pintar.
+  Camadas de tilemap de arquivos `.aseprite` abrem como pixels comuns.
 * **Importar imagem.** Uma imagem abre como novo projeto ou entra como
   camada; uma spritesheet vira quadros. Não há opção de redimensionar na
   importação.
-* **Formatos animados.** Não há exportação de APNG ou WebP animado. O GIF
-  reduz as cores com median cut, sem pontilhado.
+* **Formatos animados.** Há GIF e APNG. Não há WebP animado, vídeo ou PSD. O
+  GIF reduz as cores com median cut, sem pontilhado.
+* **Arquivos do Aseprite.** Abre RGB, tons de cinza e indexado; salva sempre em
+  RGBA. Slices, dados de usuário de camadas e células, e a ordem z por célula
+  são ignorados.
+* **Modo indexado.** Os pixels continuam guardados em RGBA e o editor garante
+  que sejam cores da paleta. Mesclar camadas com modos de mesclagem pode criar
+  cores fora da paleta até a próxima edição.
+* **Recursos do Aseprite ainda ausentes.** Scripts Lua e extensões, slices
+  (9-slice e pivô), camada de fundo, curvas de cor, exportação pela linha de
+  comando e pré-visualização em janela flutuante.
 * **Idioma.** A interface está só em português.
 * **Arquiteturas.** Os pacotes foram gerados e testados só para x86_64.
 * **AppImage e associação de arquivos.** O AppImage não registra a extensão
@@ -58,12 +60,11 @@ mais simples:
 
 ## Próximas ideias
 
-1. Alças de transformação no canvas, com rotação livre (rotsprite).
-2. Seleção de vários quadros, copiar e colar quadros e células.
-3. Exportação de APNG e WebP animado, e GIF com pontilhado.
-4. Modo de mapa de tiles com paleta de tiles e tiles espelhados.
+1. Modo de mapa de tiles com paleta de tiles e tiles espelhados.
+2. Exportação de WebP animado e GIF com pontilhado.
+3. Slices com 9-slice e pivô na exportação da spritesheet.
+4. Exportação pela linha de comando para pipelines de jogos.
 5. Importação de fontes BDF e mais fontes bitmap incluídas.
 6. Pré-visualização em janela flutuante.
 7. Pacotes arm64 e publicação no Flathub.
 8. Tradução da interface (inglês e espanhol).
-9. Suporte a pressão de caneta para o pincel.
