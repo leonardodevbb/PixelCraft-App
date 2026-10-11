@@ -31,7 +31,7 @@ function renderSettings(p: Preferences): RenderSettings {
 }
 
 /** Builds the bridge tools use to read colors/options and report problems. */
-function makeHost(): ToolHost {
+function makeHost(r: CanvasRenderer): ToolHost {
   const st = useEditor.getState();
   return {
     session: st.session!,
@@ -40,6 +40,12 @@ function makeHost(): ToolHost {
     setColor: (slot, c) => useEditor.getState().setColor(slot, c),
     notify: (m) => useEditor.getState().toast('error', m),
     symmetryActive: st.symmetryOn,
+    preview: (p) => {
+      if (p.marquee !== undefined) r.overlay.marquee = p.marquee;
+      if (p.lasso !== undefined) r.overlay.lasso = p.lasso;
+      if (p.selectionOffset !== undefined) r.overlay.selectionOffset = p.selectionOffset;
+      r.request();
+    },
   };
 }
 
@@ -84,7 +90,12 @@ export function CanvasView() {
       r.request();
     });
     ro.observe(canvas);
+    // Marching ants: only animate while something is selected.
+    const ants = window.setInterval(() => {
+      if (r.hasAnts && document.visibilityState === 'visible') r.tickAnts();
+    }, 120);
     return () => {
+      window.clearInterval(ants);
       unsubEditor();
       unsubPrefs();
       ro.disconnect();
@@ -175,7 +186,7 @@ export function CanvasView() {
       }
       const tool = getTool(effectiveTool());
       if (!tool) return;
-      const host = makeHost();
+      const host = makeHost(rendererRef.current!);
       active = { kind: 'tool', tool, host, pointerId: e.pointerId, startX: sx, startY: sy, startOffsetX: 0, startOffsetY: 0, slot };
       tool.onDown(toPointer(e, slot), host);
     };

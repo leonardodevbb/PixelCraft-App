@@ -1,4 +1,5 @@
 import { eyedropperTool } from './eyedropper';
+import { bucketTool, lassoTool, magicWandTool, moveTool, rectSelectTool } from './fill-select-tools';
 import { brushTool, eraserTool, pencilTool } from './paint-tools';
 import { ellipseFilledTool, ellipseTool, lineTool, rectFilledTool, rectTool } from './shape-tools';
 import type { Tool, ToolId } from './types';
@@ -15,6 +16,11 @@ const TOOLS: Tool[] = [
   ellipseTool,
   ellipseFilledTool,
   eyedropperTool,
+  bucketTool,
+  rectSelectTool,
+  lassoTool,
+  magicWandTool,
+  moveTool,
 ];
 
 const BY_ID = new Map<ToolId, Tool>(TOOLS.map((t) => [t.id, t]));

@@ -44,6 +44,10 @@ export interface Overlay {
   floating: { buffer: PixelBuffer; x: number; y: number } | null;
   /** Rectangle being dragged (selection tools). */
   marquee: Rect | null;
+  /** Lasso path being drawn, in document pixels. */
+  lasso: Point[] | null;
+  /** Offset applied to the selection outline while it is being moved. */
+  selectionOffset: Point | null;
 }
 
 /**
@@ -68,11 +72,12 @@ export class CanvasRenderer {
   private floatingCanvas: HTMLCanvasElement | null = null;
   private floatingRef: PixelBuffer | null = null;
   private antsOffset = 0;
+  private edgeCache: { sel: { bounds: Rect; mask: Uint8Array }; edges: Int32Array } | null = null;
 
   session: EditorSession | null = null;
   transform: ViewTransform = { zoom: 8, offsetX: 0, offsetY: 0 };
   settings: RenderSettings;
-  overlay: Overlay = { cursorPixels: null, cursorColor: '#ffffff', selection: null, floating: null, marquee: null };
+  overlay: Overlay = { cursorPixels: null, cursorColor: '#ffffff', selection: null, floating: null, marquee: null, lasso: null, selectionOffset: null };
   /** Renders a frame other than the active one (playback). */
   frameOverride: string | null = null;
 
@@ -352,39 +357,88 @@ export class CanvasRenderer {
     }
   }
 
+  /** Active selection outline: explicit overlay wins over the session's selection. */
+  get shownSelection(): { bounds: Rect; mask: Uint8Array } | null {
+    return this.overlay.selection ?? this.session?.selection ?? null;
+  }
+
+  /** Boundary edges of a selection mask (x0,y0,x1,y1 quadruples in document pixels), cached per mask. */
+  private selectionEdges(sel: { bounds: Rect; mask: Uint8Array }): Int32Array {
+    if (this.edgeCache?.sel === sel) return this.edgeCache.edges;
+    const { bounds: b, mask } = sel;
+    const at = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < b.w && y < b.h && mask[y * b.w + x] === 1;
+    const out: number[] = [];
+    // Horizontal edges, merged into runs.
+    for (let y = 0; y <= b.h; y++) {
+      let run = -1;
+      for (let x = 0; x <= b.w; x++) {
+        const edge = x < b.w && at(x, y) !== at(x, y - 1);
+        if (edge && run < 0) run = x;
+        else if (!edge && run >= 0) {
+          out.push(b.x + run, b.y + y, b.x + x, b.y + y);
+          run = -1;
+        }
+      }
+    }
+    for (let x = 0; x <= b.w; x++) {
+      let run = -1;
+      for (let y = 0; y <= b.h; y++) {
+        const edge = y < b.h && at(x, y) !== at(x - 1, y);
+        if (edge && run < 0) run = y;
+        else if (!edge && run >= 0) {
+          out.push(b.x + x, b.y + run, b.x + x, b.y + y);
+          run = -1;
+        }
+      }
+    }
+    const edges = Int32Array.from(out);
+    this.edgeCache = { sel, edges };
+    return edges;
+  }
+
+  /** True when marching ants need animating. */
+  get hasAnts(): boolean {
+    return !!(this.shownSelection || this.overlay.marquee || this.overlay.lasso);
+  }
+
   private drawSelection(ctx: CanvasRenderingContext2D): void {
     const { zoom, offsetX, offsetY } = this.transform;
     const path = new Path2D();
-    const sel = this.overlay.selection;
+    const sel = this.shownSelection;
     if (sel) {
-      const { bounds: b, mask } = sel;
-      const at = (x: number, y: number): boolean =>
-        x >= 0 && y >= 0 && x < b.w && y < b.h && mask[y * b.w + x] === 1;
-      // Outline = edges between selected and unselected pixels.
-      for (let y = 0; y <= b.h; y++) {
-        for (let x = 0; x < b.w; x++) {
-          if (at(x, y) !== at(x, y - 1)) {
-            const sx = offsetX + (b.x + x) * zoom;
-            const sy = Math.round(offsetY + (b.y + y) * zoom) + 0.5;
-            path.moveTo(sx, sy);
-            path.lineTo(sx + zoom, sy);
-          }
-        }
-      }
-      for (let x = 0; x <= b.w; x++) {
-        for (let y = 0; y < b.h; y++) {
-          if (at(x, y) !== at(x - 1, y)) {
-            const sx = Math.round(offsetX + (b.x + x) * zoom) + 0.5;
-            const sy = offsetY + (b.y + y) * zoom;
-            path.moveTo(sx, sy);
-            path.lineTo(sx, sy + zoom);
-          }
+      const e = this.selectionEdges(sel);
+      const ox = offsetX + (this.overlay.selectionOffset?.x ?? 0) * zoom;
+      const oy = offsetY + (this.overlay.selectionOffset?.y ?? 0) * zoom;
+      for (let i = 0; i < e.length; i += 4) {
+        const horizontal = e[i + 1] === e[i + 3];
+        const x0 = ox + e[i]! * zoom;
+        const y0 = oy + e[i + 1]! * zoom;
+        const x1 = ox + e[i + 2]! * zoom;
+        const y1 = oy + e[i + 3]! * zoom;
+        if (horizontal) {
+          const sy = Math.round(y0) + 0.5;
+          path.moveTo(x0, sy);
+          path.lineTo(x1, sy);
+        } else {
+          const sx = Math.round(x0) + 0.5;
+          path.moveTo(sx, y0);
+          path.lineTo(sx, y1);
         }
       }
     }
     const m = this.overlay.marquee;
     if (m) path.rect(Math.round(offsetX + m.x * zoom) + 0.5, Math.round(offsetY + m.y * zoom) + 0.5, m.w * zoom, m.h * zoom);
-    if (!sel && !m) return;
+    const lasso = this.overlay.lasso;
+    if (lasso && lasso.length) {
+      lasso.forEach((p, i) => {
+        const sx = offsetX + (p.x + 0.5) * zoom;
+        const sy = offsetY + (p.y + 0.5) * zoom;
+        if (i === 0) path.moveTo(sx, sy);
+        else path.lineTo(sx, sy);
+      });
+      path.closePath();
+    }
+    if (!sel && !m && !lasso) return;
     ctx.save();
     ctx.lineWidth = 1;
     ctx.strokeStyle = '#000';

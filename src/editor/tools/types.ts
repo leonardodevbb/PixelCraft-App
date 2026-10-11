@@ -1,6 +1,7 @@
 import type { RGBA } from '../../raster/color';
 import type { BrushShape } from '../../raster/shapes';
 import type { EditorSession } from '../session';
+import type { Point, Rect } from '../../raster/rect';
 
 export type ToolId =
   | 'pencil'
@@ -56,6 +57,14 @@ export const DEFAULT_TOOL_OPTIONS: ToolOptions = {
   sampleMerged: false,
 };
 
+/** Transient visuals a tool can ask the canvas to draw. */
+export interface ToolPreview {
+  marquee?: Rect | null;
+  lasso?: Point[] | null;
+  /** Shift the selection outline while dragging. */
+  selectionOffset?: Point | null;
+}
+
 export interface ToolHost {
   session: EditorSession;
   options: ToolOptions;
@@ -65,6 +74,7 @@ export interface ToolHost {
   notify(message: string): void;
   /** Symmetry enabled for this stroke (from document settings + UI toggle). */
   symmetryActive: boolean;
+  preview(p: ToolPreview): void;
 }
 
 export interface Tool {

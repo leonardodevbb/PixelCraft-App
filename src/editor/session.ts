@@ -179,6 +179,15 @@ export class EditorSession {
     this.commit(label, next, [], [], ctxAfter ? { ...this.ctx, ...ctxAfter } : undefined);
   }
 
+  /**
+   * Swaps the state without an undo step. Only for view-only fields (such as
+   * a group being expanded) that must not pollute the history.
+   */
+  replaceStateSilently(next: DocState): void {
+    this.doc.state = next;
+    this.emit({ type: 'doc' });
+  }
+
   addImage(buf: PixelBuffer): ImageId {
     const id = newId('I');
     this.doc.images.set(id, buf);

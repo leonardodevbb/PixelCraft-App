@@ -26,6 +26,7 @@ export function makeHost(session: EditorSession, opts: Partial<ToolOptions> = {}
     },
     notify: (m) => messages.push(m),
     symmetryActive: false,
+    preview: () => undefined,
   };
 }
 
