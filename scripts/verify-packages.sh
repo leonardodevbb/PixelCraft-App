@@ -49,7 +49,10 @@ smoke() {
   local bin=$1 label=$2 out
   [ "$SMOKE" = 1 ] || return 0
   local args=(--smoke-test)
-  [ "$(id -u)" = 0 ] && args+=(--no-sandbox)
+  # Root always needs it. An extracted (not installed) .deb also lacks the
+  # setuid chrome-sandbox that postinst sets up, which matters on systems
+  # where unprivileged user namespaces are restricted (Ubuntu 24.04+).
+  if [ "$(id -u)" = 0 ] || { [ "$label" = deb ] && [ ! -u "$(dirname "$bin")/chrome-sandbox" ]; }; then args+=(--no-sandbox); fi
   local run=()
   [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] && run=(xvfb-run -a)
   out=$(HOME="$WORK/home-$label" PIXELCRAFT_MULTI_INSTANCE=1 timeout 90 "${run[@]}" "$bin" "${args[@]}" 2>&1 | grep PIXELCRAFT_SMOKE)
@@ -99,7 +102,9 @@ if [ -f "$FLATPAK" ]; then
   pass "pacote presente"
   if [ "$FLATPAK_RUN" = 1 ]; then
     flatpak install --user --noninteractive --reinstall "$FLATPAK" >/dev/null && pass "instalado (usuário)" || fail "flatpak install"
-    out=$(timeout 90 flatpak run io.github.leonardodevbb.PixelCraft --smoke-test 2>&1 | grep PIXELCRAFT_SMOKE)
+    run=()
+    [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] && run=(xvfb-run -a)
+    out=$(timeout 120 "${run[@]}" flatpak run io.github.leonardodevbb.PixelCraft --smoke-test 2>&1 | grep PIXELCRAFT_SMOKE)
     [[ "$out" == PIXELCRAFT_SMOKE_OK* ]] && pass "inicia ($out)" || fail "não iniciou: ${out:-sem saída}"
   fi
 else

@@ -13,8 +13,8 @@ jobs:
   test:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -33,8 +33,8 @@ jobs:
     needs: test
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -43,7 +43,7 @@ jobs:
       - run: npm run build
       - run: npx electron-builder --linux deb AppImage
       - run: bash scripts/build-flatpak.sh
-      - run: bash scripts/verify-packages.sh --smoke
+      - run: bash scripts/verify-packages.sh --smoke --flatpak-run
       - uses: actions/upload-artifact@v4
         with:
           name: pixelcraft-linux
