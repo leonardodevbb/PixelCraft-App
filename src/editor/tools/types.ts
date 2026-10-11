@@ -45,7 +45,7 @@ export interface ToolPointer {
   shift: boolean;
   ctrl: boolean;
   alt: boolean;
-  /** Pen pressure 0..1 (mouse reports 0.5 while pressed). */
+  /** Pen pressure 0..1; only set for pens (mice report a fixed value). */
   pressure?: number;
 }
 
@@ -65,6 +65,12 @@ export interface ToolOptions {
   letterSpacing: number;
   lineSpacing: number;
   textAlign: 'left' | 'center' | 'right';
+  /** '' = the built-in 5×7 pixel font; otherwise a system or loaded font family. */
+  textFont: string;
+  /** Pen pressure scales the size of freehand strokes. */
+  pressureSize: boolean;
+  /** Size in pixels for system/loaded fonts. */
+  textSize: number;
   /** How paint tools change the pixels they touch. */
   ink: InkMode;
   /** Freehand strokes of size 1 drop "L" corners for clean one-pixel lines. */
@@ -90,6 +96,9 @@ export const DEFAULT_TOOL_OPTIONS: ToolOptions = {
   letterSpacing: 1,
   lineSpacing: 1,
   textAlign: 'left',
+  textFont: '',
+  pressureSize: false,
+  textSize: 12,
   ink: 'simple',
   pixelPerfect: false,
   sprayDensity: 20,

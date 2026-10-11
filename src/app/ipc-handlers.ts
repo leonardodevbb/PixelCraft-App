@@ -19,7 +19,7 @@ export interface HandlerDeps {
   createWindow: () => void;
 }
 
-const fileKind = z.enum(['project', 'image', 'palette', 'gif', 'json', 'any']);
+const fileKind = z.enum(['project', 'image', 'palette', 'gif', 'json', 'font', 'any']);
 const pathArg = z.string().min(1).max(4096);
 const bytesArg = z.instanceof(Uint8Array);
 const DOCS_URL = 'https://github.com/leonardodevbb/PixelCraft-App';

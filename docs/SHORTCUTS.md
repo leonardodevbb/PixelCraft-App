@@ -202,6 +202,7 @@ Gestos que não são comandos:
 | Grade de pixels | <kbd>Ctrl+'</kbd> |
 | Grade de tiles | <kbd>Ctrl+Shift+'</kbd> |
 | Mostrar guias | <kbd>Ctrl+;</kbd> |
+| Réguas | <kbd>Ctrl+Alt+R</kbd> |
 | Guias e eixos de simetria… | — |
 | Mosaico (repetir a imagem ao redor) | <kbd>Ctrl+Shift+T</kbd> |
 | Painel lateral | <kbd>Tab</kbd> |

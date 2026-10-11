@@ -72,6 +72,7 @@ class FreehandTool implements Tool {
     if (!painter) return;
     this.painter = painter;
     const o = host.options;
+    this.applyPressure(p, host);
     const perfect = o.pixelPerfect && !o.customBrush && Math.floor(o.size) <= 1;
     this.plot = perfect ? new PixelPerfectPath(painter.stamp, painter.unstamp).add : painter.stamp;
     this.last = { x: p.x, y: p.y };
@@ -82,9 +83,29 @@ class FreehandTool implements Tool {
   onMove(p: ToolPointer, host: ToolHost): void {
     if (!this.painter || !this.last || !this.plot) return;
     if (p.x === this.last.x && p.y === this.last.y) return;
-    line(this.last.x, this.last.y, p.x, p.y, this.plot);
+    const from = this.last;
+    const plot = this.plot;
+    const p0 = this.pressure;
+    if (host.options.pressureSize && p.pressure !== undefined && p0 !== null) {
+      // Pressure changes gradually along the segment between two samples.
+      const len = Math.max(1, Math.hypot(p.x - from.x, p.y - from.y));
+      line(from.x, from.y, p.x, p.y, (x, y) => {
+        this.applyPressure({ ...p, pressure: p0 + (p.pressure! - p0) * (Math.hypot(x - from.x, y - from.y) / len) }, host);
+        plot(x, y);
+      });
+      this.pressure = p.pressure;
+    } else line(from.x, from.y, p.x, p.y, plot);
     this.last = { x: p.x, y: p.y };
     host.session.touchDraft(this.painter.dirty);
+  }
+
+  /** With a pen and the option on, pressure scales the brush from 1 px up to the chosen size. */
+  private pressure: number | null = null;
+
+  private applyPressure(p: ToolPointer, host: ToolHost): void {
+    if (!host.options.pressureSize || p.pressure === undefined || !this.painter) return;
+    this.pressure ??= p.pressure;
+    this.painter.setSize(1 + (host.options.size - 1) * Math.max(0, Math.min(1, p.pressure)));
   }
 
   onUp(_p: ToolPointer, host: ToolHost): void {
@@ -92,6 +113,7 @@ class FreehandTool implements Tool {
     this.painter = null;
     this.last = null;
     this.plot = null;
+    this.pressure = null;
     host.session.commitDraft(this.label);
   }
 
@@ -99,6 +121,7 @@ class FreehandTool implements Tool {
     this.painter = null;
     this.last = null;
     this.plot = null;
+    this.pressure = null;
     host.session.cancelDraft();
   }
 }

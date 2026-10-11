@@ -155,6 +155,7 @@ export function buildMenus(): MenuDef[] {
         'view.tileGrid',
         'view.tiledPreview',
         'view.guides',
+        'view.rulers',
         'view.editGuides',
         '-',
         'view.rightPanel',

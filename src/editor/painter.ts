@@ -67,7 +67,7 @@ export class Painter {
 
   constructor(
     private readonly target: PixelBuffer,
-    private readonly opts: PainterOptions,
+    private opts: PainterOptions,
   ) {
     this.touched = new Uint8Array(target.width * target.height);
     this.footprint = opts.brush
@@ -80,6 +80,14 @@ export class Painter {
         if (!this.rampIndex!.has(c)) this.rampIndex!.set(c, i);
       });
     }
+  }
+
+  /** Changes the brush size mid-stroke (pen pressure). Custom brushes keep their shape. */
+  setSize(size: number): void {
+    const s = Math.max(1, Math.round(size));
+    if (this.opts.brush || s === this.opts.size) return;
+    this.opts.size = s;
+    this.footprint = brushFootprint(s, this.opts.shape).map((p) => ({ ...p, c: null }));
   }
 
   /** Forgets which pixels were painted (used when a shape preview restarts). */

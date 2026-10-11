@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { indexedColor } from '../../palette/analysis';
+import { Rulers } from './Rulers';
 import { getTool, type ColorSlot, type Tool, type ToolHost, type ToolId, type ToolPointer } from '../../editor/tools';
 import { sampleColor } from '../../editor/tools/eyedropper';
 import { transformTool } from '../../editor/tools/transform-tool';
@@ -95,6 +96,7 @@ export function CanvasView() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<CanvasRenderer | null>(null);
   const session = useEditor((s) => s.session);
+  const showRulers = usePrefs((s) => s.prefs.showRulers);
 
   // Renderer lifetime
   useEffect(() => {
@@ -178,7 +180,7 @@ export function CanvasView() {
     const toPointer = (e: PointerEvent, slot: ColorSlot): ToolPointer => {
       const { sx, sy } = local(e);
       const d = screenToDoc(useEditor.getState().transform, sx, sy);
-      return { ...d, slot, shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey, alt: e.altKey, pressure: e.pressure };
+      return { ...d, slot, shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey, alt: e.altKey, ...(e.pointerType === 'pen' ? { pressure: e.pressure } : {}) };
     };
 
     const effectiveTool = (): ToolId => {
@@ -403,6 +405,7 @@ export function CanvasView() {
         aria-label="Área de desenho"
         data-testid="editor-canvas"
       />
+      {showRulers && <Rulers canvasRef={canvasRef} />}
     </div>
   );
 }

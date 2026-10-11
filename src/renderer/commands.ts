@@ -115,7 +115,7 @@ export const TOOL_COMMANDS: { tool: ToolId; label: string; keys: string[]; hint:
   { tool: 'select-lasso', label: 'Laço', keys: ['Q'], hint: 'Desenhe o contorno à mão livre. Shift adiciona, Alt subtrai.' },
   { tool: 'magic-wand', label: 'Varinha mágica', keys: ['W'], hint: 'Seleciona cores parecidas. Shift adiciona, Alt subtrai.' },
   { tool: 'move', label: 'Mover', keys: ['V'], hint: 'Move a seleção (ou a camada). Alt duplica, Ctrl move só o contorno. Setas: 1 px.' },
-  { tool: 'text', label: 'Texto', keys: ['T'], hint: 'Clique onde o texto começa. Fonte bitmap PixelCraft Sans 5×7 com acentos.' },
+  { tool: 'text', label: 'Texto', keys: ['T'], hint: 'Clique onde o texto começa. Use a fonte de pixel 5×7 ou escolha outra fonte (até TTF) no painel de texto.' },
   { tool: 'gradient', label: 'Degradê', keys: ['Shift+G'], hint: 'Arraste da cor primária para a secundária. Preenche a seleção ou a camada. Shift trava o ângulo.' },
   { tool: 'eyedropper', label: 'Conta-gotas', keys: ['I'], hint: 'Clique para pegar a cor. Alt com outra ferramenta também funciona.' },
   { tool: 'pan', label: 'Mão (mover vista)', keys: ['H'], hint: 'Arraste para mover a vista. Espaço também funciona.' },
@@ -632,6 +632,14 @@ export function registerCommands(): void {
       keys: ['Ctrl+;'],
       run: () => prefs().set({ showGuides: !prefs().prefs.showGuides }),
       checked: () => prefs().prefs.showGuides,
+    },
+    {
+      id: 'view.rulers',
+      label: 'Réguas',
+      category: 'Visualizar',
+      keys: ['Ctrl+Alt+R'],
+      run: () => prefs().set({ showRulers: !prefs().prefs.showRulers }),
+      checked: () => prefs().prefs.showRulers,
     },
     { id: 'view.editGuides', label: 'Guias e eixos de simetria…', category: 'Visualizar', run: () => ed().openDialog({ type: 'document-properties' }), enabled: hasDoc },
     {

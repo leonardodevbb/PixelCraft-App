@@ -209,3 +209,50 @@
     display: none;
   }
 }
+
+/* Rulers along the canvas edges (View → Réguas). */
+.ruler {
+  position: absolute;
+  z-index: 2;
+  cursor: copy;
+}
+.ruler-top {
+  top: 0;
+  left: 0;
+  height: 18px;
+  width: 100%;
+  border-bottom: 1px solid var(--border);
+}
+.ruler-left {
+  top: 0;
+  left: 0;
+  width: 18px;
+  height: 100%;
+  border-right: 1px solid var(--border);
+}
+.ruler-corner {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: 0;
+  width: 18px;
+  height: 18px;
+  background: var(--panel);
+}
+.guide-drag {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  background: var(--accent);
+  opacity: 0.8;
+}
+.guide-drag-y {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+.guide-drag-x {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}

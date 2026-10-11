@@ -225,3 +225,40 @@ test('colour adjustments preview live, indexed mode keeps pixels on the palette'
 
   await quit(app);
 });
+
+test('rulers create guides by dragging, text in a system font has hard edges', async () => {
+  const { app, page } = await launch();
+  await newDoc(page, 32, 32);
+
+  // Rulers: off by default, toggled from the command palette.
+  await expect(page.getByTestId('ruler-top')).toHaveCount(0);
+  await runCommand(page, 'réguas');
+  const ruler = page.getByTestId('ruler-top');
+  await expect(ruler).toBeVisible();
+  const rb = (await ruler.boundingBox())!;
+  const target = await pixelToPage(page, 10, 12);
+  await page.mouse.move(target.x, rb.y + rb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(target.x, target.y - 0.4 * (await page.evaluate(() => (window as unknown as { __pixelcraft: { transform(): { zoom: number } } }).__pixelcraft.transform().zoom)), { steps: 5 });
+  await page.mouse.up();
+  expect((await state(page)).history.at(-1)).toBe('Adicionar guia');
+  if (process.env.PIXELCRAFT_SHOTS) await page.screenshot({ path: join(process.env.PIXELCRAFT_SHOTS, 'rulers.png') });
+
+  // Text in a system font: every inked pixel is the full primary colour.
+  await page.keyboard.press('t');
+  const p = await pixelToPage(page, 1, 1);
+  await page.mouse.click(p.x, p.y);
+  await page.getByTestId('text-dialog').getByLabel('Fonte').selectOption('sans-serif');
+  await page.getByTestId('text-size-px').fill('16');
+  await page.getByTestId('text-size-px').press('Tab');
+  await page.getByTestId('text-input').fill('Ab');
+  await page.getByTestId('text-apply').click();
+  expect((await state(page)).history.at(-1)).toBe('Texto');
+  const colors = new Set<number>();
+  for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) colors.add(await pixel(page, x, y));
+  colors.delete(0);
+  expect(colors.size).toBe(1);
+  if (process.env.PIXELCRAFT_SHOTS) await page.screenshot({ path: join(process.env.PIXELCRAFT_SHOTS, 'system-font.png') });
+
+  await quit(app);
+});

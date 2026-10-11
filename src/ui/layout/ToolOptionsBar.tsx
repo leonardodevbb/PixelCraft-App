@@ -129,6 +129,14 @@ export function ToolOptionsBar() {
           hint="Remove os cantos em L do traço com ponta de 1 px, deixando linhas e curvas limpas."
         />
       )}
+      {(tool === 'pencil' || tool === 'brush' || tool === 'eraser') && (
+        <Checkbox
+          label="Pressão da caneta"
+          checked={o.pressureSize}
+          onChange={(pressureSize) => set({ pressureSize })}
+          hint="Com mesa digitalizadora, apertar mais deixa o traço mais grosso, até o tamanho escolhido."
+        />
+      )}
       {tool === 'spray' && (
         <Slider label="Densidade" value={o.sprayDensity} min={1} max={100} onChange={(sprayDensity) => set({ sprayDensity })} format={(v) => `${v}%`} />
       )}
