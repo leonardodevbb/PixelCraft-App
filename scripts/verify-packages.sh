@@ -55,8 +55,18 @@ smoke() {
   if [ "$(id -u)" = 0 ] || { [ "$label" = deb ] && [ ! -u "$(dirname "$bin")/chrome-sandbox" ]; }; then args+=(--no-sandbox); fi
   local run=()
   [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] && run=(xvfb-run -a)
-  out=$(HOME="$WORK/home-$label" PIXELCRAFT_MULTI_INSTANCE=1 timeout 90 "${run[@]}" "$bin" "${args[@]}" 2>&1 | grep PIXELCRAFT_SMOKE)
-  [[ "$out" == PIXELCRAFT_SMOKE_OK* ]] && pass "inicia ($out)" || fail "não iniciou: ${out:-sem saída}"
+  HOME="$WORK/home-$label" PIXELCRAFT_MULTI_INSTANCE=1 timeout 90 "${run[@]}" "$bin" "${args[@]}" >"$WORK/smoke-$label.log" 2>&1
+  smoke_result "$label"
+}
+
+# Reports the PIXELCRAFT_SMOKE line, or the end of the log when it is missing.
+smoke_result() {
+  local out
+  out=$(grep PIXELCRAFT_SMOKE "$WORK/smoke-$1.log")
+  if [[ "$out" == PIXELCRAFT_SMOKE_OK* ]]; then pass "inicia ($out)"; else
+    fail "não iniciou: ${out:-sem saída}"
+    tail -n 25 "$WORK/smoke-$1.log" | sed 's/^/       | /'
+  fi
 }
 
 DEB=release/pixelcraft_${VERSION}_amd64.deb
@@ -104,8 +114,10 @@ if [ -f "$FLATPAK" ]; then
     flatpak install --user --noninteractive --reinstall "$FLATPAK" >/dev/null && pass "instalado (usuário)" || fail "flatpak install"
     run=()
     [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] && run=(xvfb-run -a)
-    out=$(timeout 120 "${run[@]}" flatpak run io.github.leonardodevbb.PixelCraft --smoke-test 2>&1 | grep PIXELCRAFT_SMOKE)
-    [[ "$out" == PIXELCRAFT_SMOKE_OK* ]] && pass "inicia ($out)" || fail "não iniciou: ${out:-sem saída}"
+    # Flatpak expects a session bus (portals, document store); CI has none.
+    [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && command -v dbus-run-session >/dev/null && run=(dbus-run-session -- "${run[@]}")
+    timeout 120 "${run[@]}" flatpak run io.github.leonardodevbb.PixelCraft --smoke-test >"$WORK/smoke-flatpak.log" 2>&1
+    smoke_result flatpak
   fi
 else
   echo "== Flatpak não encontrado ($FLATPAK); rode npm run package:flatpak"
