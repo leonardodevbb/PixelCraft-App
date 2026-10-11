@@ -26,7 +26,7 @@ test('frames, playback and animation exports', async () => {
   await dot(page, 5, 5);
   await page.keyboard.press('Alt+d');
   await dot(page, 10, 10);
-  let s = await state(page);
+  const s = await state(page);
   expect(s.frames).toBe(3);
   expect(s.activeFrame).toBe(2);
   await expect(page.getByTestId('frame-cell')).toHaveCount(3);

@@ -1,4 +1,4 @@
-import { PixelBuffer } from '../raster/pixel-buffer';
+import { type PixelBuffer } from '../raster/pixel-buffer';
 import type { Rect } from '../raster/rect';
 
 export interface SliceOptions {
