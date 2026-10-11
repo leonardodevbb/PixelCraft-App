@@ -436,6 +436,7 @@ export function registerCommands(): void {
     { id: 'help.commandPalette', label: 'Paleta de comandos…', category: 'Ajuda', keys: ['Ctrl+K', 'Ctrl+Shift+P'], run: () => ed().openDialog({ type: 'command-palette' }) },
     { id: 'help.shortcuts', label: 'Atalhos de teclado', category: 'Ajuda', keys: ['F1'], run: () => ed().openDialog({ type: 'shortcuts' }) },
     { id: 'help.docs', label: 'Documentação online', category: 'Ajuda', run: () => api.app.openDocs('readme') },
+    { id: 'help.tutorial', label: 'Primeiros passos', category: 'Ajuda', run: () => ed().openDialog({ type: 'tutorial' }) },
     { id: 'help.about', label: 'Sobre o PixelCraft', category: 'Ajuda', run: () => ed().openDialog({ type: 'about' }) },
 
     // Tools

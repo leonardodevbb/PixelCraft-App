@@ -138,7 +138,7 @@ export function buildMenus(): MenuDef[] {
     },
     {
       label: 'Ajuda',
-      items: ['help.commandPalette', 'help.shortcuts', 'help.docs', '-', 'help.about'],
+      items: ['help.tutorial', 'help.commandPalette', 'help.shortcuts', 'help.docs', '-', 'help.about'],
     },
   ];
 }

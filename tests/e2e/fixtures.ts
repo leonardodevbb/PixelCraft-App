@@ -1,5 +1,5 @@
 import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
-import { mkdtempSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -10,8 +10,14 @@ export interface Launched {
 }
 
 /** Starts the built app with isolated XDG directories. */
-export async function launch(opts: { args?: string[]; home?: string } = {}): Promise<Launched> {
+export async function launch(opts: { args?: string[]; home?: string; tutorial?: boolean } = {}): Promise<Launched> {
   const home = opts.home ?? mkdtempSync(join(tmpdir(), 'pixelcraft-e2e-'));
+  // Fresh profiles skip the first-run tutorial unless a test asks for it.
+  const settings = join(home, 'config', 'pixelcraft', 'settings.json');
+  if (!existsSync(settings)) {
+    mkdirSync(join(home, 'config', 'pixelcraft'), { recursive: true });
+    writeFileSync(settings, JSON.stringify({ showTutorial: !!opts.tutorial }));
+  }
   // PIXELCRAFT_E2E_EXECUTABLE runs the suite against a packaged build
   // (e.g. release/linux-unpacked/pixelcraft) instead of the dev checkout.
   const packaged = process.env.PIXELCRAFT_E2E_EXECUTABLE;

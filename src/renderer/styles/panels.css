@@ -593,3 +593,40 @@ button.layer-name:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+
+.tutorial-step {
+  min-height: 170px;
+}
+.tutorial-step h2 {
+  margin: 8px 0 10px;
+  font-size: 16px;
+}
+.tutorial-step p {
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+.tutorial-icon {
+  display: inline-flex;
+  padding: 10px;
+  border-radius: 12px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.tutorial-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.tutorial-dots button {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--border);
+  cursor: pointer;
+}
+.tutorial-dots button.is-active {
+  background: var(--accent);
+}

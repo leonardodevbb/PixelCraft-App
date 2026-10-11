@@ -14,6 +14,7 @@ import { ImportSpritesheetDialog } from './ImportSpritesheetDialog';
 import { AnimationExportDialog } from './AnimationExportDialog';
 import { TextDialog } from './TextDialog';
 import { TilesDialog } from './TilesDialog';
+import { TutorialDialog } from './TutorialDialog';
 
 export function DialogHost() {
   const d = useEditor((s) => s.dialog);
@@ -57,6 +58,8 @@ export function DialogHost() {
       return <CommandPalette />;
     case 'preferences':
       return <PreferencesDialog />;
+    case 'tutorial':
+      return <TutorialDialog />;
     case 'tileset':
       return <TilesDialog />;
     case 'text':

@@ -94,6 +94,15 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  // First-run introduction, once per launch, when the first document opens.
+  const prefsLoaded = usePrefs((s) => s.loaded);
+  const [tutorialShown, setTutorialShown] = useState(false);
+  useEffect(() => {
+    if (!session || !prefsLoaded || tutorialShown) return;
+    setTutorialShown(true);
+    if (usePrefs.getState().prefs.showTutorial && !useEditor.getState().dialog) useEditor.getState().openDialog({ type: 'tutorial' });
+  }, [session, prefsLoaded, tutorialShown]);
+
   // Autosave to the recovery area while there are unsaved changes.
   useEffect(() => {
     if (!autosaveSeconds) return;

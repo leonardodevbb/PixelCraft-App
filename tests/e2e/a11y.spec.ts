@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { launch, quit } from './fixtures';
 
+
 // axe-core is evaluated through the debugger protocol, which is not subject
 // to the app's Content-Security-Policy (an injected <script> would be).
 const AXE = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8');
@@ -73,5 +74,25 @@ test('no WCAG A/AA violations on the main screens', async () => {
   problems.push(...(await audit(page, 'editor (tema claro)')));
   console.log(problems.join('\n'));
   expect(problems).toEqual([]);
+  await quit(app);
+});
+
+test('first-run tutorial appears once and can be turned off', async () => {
+  const { app, page } = await launch({ tutorial: true });
+  await page.getByTestId('quick-16x16').click();
+  await expect(page.getByTestId('tutorial-dialog')).toBeVisible();
+  if (process.env.PIXELCRAFT_SHOTS) await page.screenshot({ path: `${process.env.PIXELCRAFT_SHOTS}/phase6-tutorial.png` });
+  {
+    const found = await audit(page, 'tutorial');
+    expect(found).toEqual([]);
+  }
+  for (let i = 0; i < 4; i++) await page.getByTestId('tutorial-next').click();
+  await page.getByLabel('Mostrar ao abrir').uncheck();
+  await page.getByTestId('tutorial-done').click();
+  await expect(page.getByTestId('tutorial-dialog')).toBeHidden();
+  // Reopen from the Help menu
+  await page.getByRole('menuitem', { name: 'Ajuda', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Primeiros passos' }).click();
+  await expect(page.getByTestId('tutorial-dialog')).toBeVisible();
   await quit(app);
 });
