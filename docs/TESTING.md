@@ -54,11 +54,17 @@ pixels.
   JSON e sequência de PNG.
 * `phase4`: texto, degradê, paleta de comandos, atalho personalizado,
   JPEG/WebP/BMP, importar como camada e tileset com mapa do Tiled.
+* `menus`: propriedades do projeto (guias, modo de reprodução), menu
+  Animação › Modo de reprodução, duplicar seleção, texto em nova camada,
+  Abrir recentes e relatório de diagnóstico.
 * `stability`: o app é encerrado à força (SIGKILL) depois do salvamento
   automático; ao abrir de novo, a tela inicial oferece a cópia e ela é
-  restaurada com os pixels certos.
+  restaurada com os pixels certos. Outro teste abre e fecha 15 documentos de
+  512×512 com duas camadas e confere que nem o heap JS nem a memória do
+  processo de interface crescem (medido: heap estável em ~9,5 MB, renderer
+  +4 MB).
 * `a11y`: auditoria axe na tela inicial, no editor (temas escuro e claro) e em
-  13 diálogos; tutorial de primeiros passos.
+  16 diálogos; tutorial de primeiros passos.
 
 Sem display (servidor, CI, container):
 

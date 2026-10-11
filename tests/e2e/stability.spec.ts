@@ -28,3 +28,49 @@ test('recovers unsaved work after the app is killed', async () => {
   expect((await page2.evaluate(() => (window as unknown as Hook).__pixelcraft.state())).dirty).toBe(true);
   await quit(second.app);
 });
+
+test('memory returns to baseline after opening and closing documents repeatedly', async () => {
+  const { app, page } = await launch({ args: ['--js-flags=--expose-gc'] });
+  const heap = async (): Promise<number> =>
+    page.evaluate(async () => {
+      const w = window as unknown as { gc?: () => void };
+      for (let i = 0; i < 3; i++) {
+        w.gc?.();
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      return (performance as unknown as { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize;
+    });
+  expect(await page.evaluate(() => typeof (window as unknown as { gc?: unknown }).gc)).toBe('function');
+
+  const cycle = async (): Promise<void> => {
+    await page.getByTestId('quick-16x16').waitFor();
+    await page.keyboard.press('Control+n');
+    await page.getByTestId('project-width').fill('512');
+    await page.getByTestId('project-width').press('Tab');
+    await page.getByTestId('project-height').fill('512');
+    await page.getByTestId('project-height').press('Tab');
+    await page.getByTestId('create-project').click();
+    await page.keyboard.press('g');
+    const p = await pixelToPage(page, 10, 10);
+    await page.mouse.click(p.x, p.y);
+    await page.keyboard.press('Control+Shift+n');
+    await page.mouse.click(p.x, p.y);
+    await page.keyboard.press('Control+w');
+    await page.getByTestId('confirm-alt').click();
+  };
+  // Pixel buffers live outside the JS heap, so also watch the renderer's resident memory.
+  const rendererMB = async (): Promise<number> =>
+    app.evaluate(({ app: a }) => Math.max(...a.getAppMetrics().filter((m) => m.type === 'Tab').map((m) => m.memory.workingSetSize)) / 1024);
+  for (let i = 0; i < 3; i++) await cycle();
+  const base = await heap();
+  const baseRss = await rendererMB();
+  for (let i = 0; i < 15; i++) await cycle();
+  const end = await heap();
+  const endRss = await rendererMB();
+  const growth = (end - base) / 1024 / 1024;
+  console.log(`[memória] heap JS ${(base / 1048576).toFixed(1)} → ${(end / 1048576).toFixed(1)} MB; renderer ${baseRss.toFixed(0)} → ${endRss.toFixed(0)} MB`);
+  // Each cycle allocates ~2 MB of pixels plus undo data: a leak would add ~30+ MB.
+  expect(growth).toBeLessThan(8);
+  expect(endRss - baseRss).toBeLessThan(40);
+  await quit(app);
+});
