@@ -1,0 +1,63 @@
+# electron-builder configuration for the Linux packages (deb, AppImage).
+# Flatpak is built separately with flatpak-builder (see packaging/flatpak).
+appId: io.github.leonardodevbb.PixelCraft
+productName: PixelCraft
+executableName: pixelcraft
+copyright: Copyright © 2026 PixelCraft contributors
+directories:
+  output: release
+  buildResources: build
+# Use the Electron already installed in node_modules (no extra download).
+electronDist: node_modules/electron/dist
+files:
+  - dist/**
+  - dist-electron/**
+  - package.json
+  - "!**/*.map"
+asar: true
+extraResources:
+  - from: build/icon.png
+    to: icon.png
+# No auto-update: updates come from the package manager or a new AppImage.
+publish: null
+artifactName: ${name}_${version}_${arch}.${ext}
+fileAssociations:
+  - ext: pixelcraft
+    name: Projeto PixelCraft
+    description: Projeto PixelCraft
+    mimeType: application/x-pixelcraft
+    role: Editor
+linux:
+  target:
+    - deb
+    - AppImage
+  category: Graphics;2DGraphics;RasterGraphics
+  syncDesktopName: true
+  icon: build/icons
+  maintainer: PixelCraft contributors <pixelcraft@users.noreply.github.com>
+  vendor: PixelCraft contributors
+  synopsis: Editor de pixel art e animação quadro a quadro
+  # Also used as the .desktop Comment, so keep it to one short sentence.
+  description: Desenhe e anime pixel art, com camadas, linha do tempo, paletas e tiles. Funciona offline.
+  desktop:
+    entry:
+      Name: PixelCraft
+      GenericName: Editor de pixel art
+      Keywords: pixel;art;sprite;animação;animation;gif;tileset;desenho;
+      StartupWMClass: pixelcraft
+      Terminal: "false"
+deb:
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    - libuuid1
+    - libsecret-1-0
+  priority: optional
+  packageCategory: graphics
+appImage:
+  artifactName: PixelCraft-${version}-${arch}.AppImage

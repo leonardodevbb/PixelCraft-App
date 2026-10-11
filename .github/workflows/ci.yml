@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - name: Testes de interface (Electron + Xvfb)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          npm run build
+          xvfb-run -a npx playwright test
+
+  packages:
+    needs: test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y xvfb desktop-file-utils appstream flatpak flatpak-builder
+      - run: npm run build
+      - run: npx electron-builder --linux deb AppImage
+      - run: bash scripts/build-flatpak.sh
+      - run: bash scripts/verify-packages.sh --smoke --flatpak-run
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pixelcraft-linux
+          path: |
+            release/*.deb
+            release/*.AppImage
+            release/*.flatpak
+          if-no-files-found: error

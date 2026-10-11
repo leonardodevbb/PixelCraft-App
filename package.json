@@ -9,16 +9,32 @@
     "name": "PixelCraft contributors",
     "email": "pixelcraft@users.noreply.github.com"
   },
-  "homepage": "https://github.com/pixelcraft/pixelcraft",
-  "main": "dist-electron/main.js",
+  "homepage": "https://github.com/leonardodevbb/PixelCraft-App",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leonardodevbb/PixelCraft-App.git"
+  },
+  "main": "dist-electron/main.cjs",
+  "desktopName": "pixelcraft.desktop",
   "type": "module",
-  "scripts": {},
-  "dependencies": {
-    "fflate": "^0.8.3",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "zod": "^4.6.5",
-    "zustand": "^5.0.15"
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build:renderer": "vite build",
+    "build:electron": "node scripts/build-electron.mjs",
+    "build": "npm run build:renderer && npm run build:electron",
+    "start": "electron .",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "npm run build && playwright test",
+    "docs:shortcuts": "UPDATE_DOCS=1 vitest run tests/unit/shortcuts-doc.test.ts",
+    "branding": "esbuild scripts/branding.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/branding.mjs --log-level=warning && node node_modules/.cache/branding.mjs",
+    "package:deb": "npm run build && electron-builder --linux deb",
+    "package:appimage": "npm run build && electron-builder --linux AppImage",
+    "package:flatpak": "npm run build && bash scripts/build-flatpak.sh",
+    "package:all": "npm run build && electron-builder --linux deb AppImage && bash scripts/build-flatpak.sh",
+    "verify:packages": "bash scripts/verify-packages.sh"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",
@@ -26,14 +42,20 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.2.0",
+    "axe-core": "^4.14.0",
     "electron": "^41.10.7",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
     "eslint": "^9.39.5",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "fflate": "^0.8.3",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.71.1",
     "vite": "^7.3.7",
-    "vitest": "^3.2.7"
+    "vitest": "^3.2.7",
+    "zod": "^4.6.5",
+    "zustand": "^5.0.15"
   }
 }
