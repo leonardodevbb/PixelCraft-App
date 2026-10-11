@@ -51,6 +51,10 @@ export interface Overlay {
   lasso: Point[] | null;
   /** Offset applied to the selection outline while it is being moved. */
   selectionOffset: Point | null;
+  /** Ellipse being dragged by the elliptical selection tool. */
+  ellipse: Rect | null;
+  /** Curve control points (start, c1, c2, end) shown as handles. */
+  handles: Point[] | null;
 }
 
 /**
@@ -80,7 +84,7 @@ export class CanvasRenderer {
   session: EditorSession | null = null;
   transform: ViewTransform = { zoom: 8, offsetX: 0, offsetY: 0 };
   settings: RenderSettings;
-  overlay: Overlay = { cursorPixels: null, cursorColor: '#ffffff', selection: null, floating: null, marquee: null, lasso: null, selectionOffset: null };
+  overlay: Overlay = { cursorPixels: null, cursorColor: '#ffffff', selection: null, floating: null, marquee: null, lasso: null, selectionOffset: null, ellipse: null, handles: null };
   /** Renders a frame other than the active one (playback). */
   frameOverride: string | null = null;
 
@@ -325,7 +329,38 @@ export class CanvasRenderer {
     }
 
     this.drawSelection(ctx);
+    this.drawHandles(ctx);
     this.drawCursor(ctx);
+  }
+
+  /** Curve handles: lines from each end point to its control point, plus small squares. */
+  private drawHandles(ctx: CanvasRenderingContext2D): void {
+    const h = this.overlay.handles;
+    if (!h || h.length !== 4) return;
+    const { zoom, offsetX, offsetY } = this.transform;
+    const at = (p: Point): [number, number] => [offsetX + (p.x + 0.5) * zoom, offsetY + (p.y + 0.5) * zoom];
+    ctx.save();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(46, 196, 182, 0.9)';
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    for (const [a, b] of [
+      [h[0]!, h[1]!],
+      [h[3]!, h[2]!],
+    ] as const) {
+      ctx.moveTo(...at(a));
+      ctx.lineTo(...at(b));
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (const p of h) {
+      const [x, y] = at(p);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(Math.round(x) - 3, Math.round(y) - 3, 7, 7);
+      ctx.strokeStyle = '#1b1726';
+      ctx.strokeRect(Math.round(x) - 3.5, Math.round(y) - 3.5, 8, 8);
+    }
+    ctx.restore();
   }
 
   private drawGrids(ctx: CanvasRenderingContext2D, dw: number, dh: number, cw: number, ch: number): void {
@@ -411,7 +446,7 @@ export class CanvasRenderer {
 
   /** True when marching ants need animating. */
   get hasAnts(): boolean {
-    return !!(this.shownSelection || this.overlay.marquee || this.overlay.lasso);
+    return !!(this.shownSelection || this.overlay.marquee || this.overlay.lasso || this.overlay.ellipse);
   }
 
   private drawSelection(ctx: CanvasRenderingContext2D): void {
@@ -451,7 +486,14 @@ export class CanvasRenderer {
       });
       path.closePath();
     }
-    if (!sel && !m && !lasso) return;
+    const el = this.overlay.ellipse;
+    if (el) {
+      const rx = (el.w * zoom) / 2;
+      const ry = (el.h * zoom) / 2;
+      path.moveTo(offsetX + el.x * zoom + 2 * rx, offsetY + el.y * zoom + ry);
+      path.ellipse(offsetX + el.x * zoom + rx, offsetY + el.y * zoom + ry, rx, ry, 0, 0, Math.PI * 2);
+    }
+    if (!sel && !m && !lasso && !el) return;
     ctx.save();
     ctx.lineWidth = 1;
     ctx.strokeStyle = '#000';

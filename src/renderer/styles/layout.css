@@ -91,7 +91,7 @@
 }
 
 .toolbar {
-  width: 44px;
+  width: 76px;
   flex: none;
   display: flex;
   flex-direction: column;
@@ -104,8 +104,8 @@
   overflow-y: auto;
 }
 .tool-group {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 32px);
   gap: 2px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--border);
@@ -140,6 +140,16 @@
   font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.tool-badge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--panel-3);
+  white-space: nowrap;
+}
+.ink-field {
+  display: contents;
 }
 .option-group {
   display: flex;

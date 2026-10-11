@@ -3,6 +3,7 @@ import type { BrushShape } from '../../raster/shapes';
 import type { DitherMode, GradientShape } from '../../raster/gradient';
 import type { EditorSession } from '../session';
 import type { Point, Rect } from '../../raster/rect';
+import type { CustomBrush, InkMode } from '../painter';
 
 export type ToolId =
   | 'pencil'
@@ -21,7 +22,13 @@ export type ToolId =
   | 'move'
   | 'text'
   | 'gradient'
-  | 'pan';
+  | 'pan'
+  | 'spray'
+  | 'contour'
+  | 'curve'
+  | 'blur'
+  | 'jumble'
+  | 'select-ellipse';
 
 export type ColorSlot = 'primary' | 'secondary';
 
@@ -36,6 +43,8 @@ export interface ToolPointer {
   shift: boolean;
   ctrl: boolean;
   alt: boolean;
+  /** Pen pressure 0..1 (mouse reports 0.5 while pressed). */
+  pressure?: number;
 }
 
 export interface ToolOptions {
@@ -54,6 +63,14 @@ export interface ToolOptions {
   letterSpacing: number;
   lineSpacing: number;
   textAlign: 'left' | 'center' | 'right';
+  /** How paint tools change the pixels they touch. */
+  ink: InkMode;
+  /** Freehand strokes of size 1 drop "L" corners for clean one-pixel lines. */
+  pixelPerfect: boolean;
+  /** Spray: pixels per sample, as a percentage of the spray area (1..100). */
+  sprayDensity: number;
+  /** Brush captured from a selection; replaces size and shape when set. */
+  customBrush: CustomBrush | null;
 }
 
 export const DEFAULT_TOOL_OPTIONS: ToolOptions = {
@@ -69,6 +86,10 @@ export const DEFAULT_TOOL_OPTIONS: ToolOptions = {
   letterSpacing: 1,
   lineSpacing: 1,
   textAlign: 'left',
+  ink: 'simple',
+  pixelPerfect: false,
+  sprayDensity: 20,
+  customBrush: null,
 };
 
 /** Transient visuals a tool can ask the canvas to draw. */
@@ -77,6 +98,10 @@ export interface ToolPreview {
   lasso?: Point[] | null;
   /** Shift the selection outline while dragging. */
   selectionOffset?: Point | null;
+  /** Ellipse being dragged by the elliptical selection tool. */
+  ellipse?: Rect | null;
+  /** Control points of a curve being edited (start, c1, c2, end). */
+  handles?: Point[] | null;
 }
 
 export interface ToolHost {
@@ -101,6 +126,8 @@ export interface Tool {
   onUp(p: ToolPointer, host: ToolHost): void;
   /** Escape or focus loss in the middle of an interaction. */
   cancel(host: ToolHost): void;
+  /** The user switched to another tool: drop any half-finished work. */
+  deactivate?(host: ToolHost): void;
   /** CSS cursor for the canvas. */
   cursor: string;
 }

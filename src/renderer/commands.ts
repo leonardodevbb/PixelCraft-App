@@ -24,7 +24,7 @@ import {
   unlinkCel,
 } from '../editor/frame-ops';
 import { invertSelection, opaqueSelection } from '../editor/selection';
-import { flipSelectedH, flipSelectedV, rotateSelected } from '../editor/selection-ops';
+import { brushFromSelection, flipSelectedH, flipSelectedV, rotateSelected } from '../editor/selection-ops';
 import { EditorError, type EditorSession } from '../editor/session';
 import {
   centerContent,
@@ -108,6 +108,12 @@ export const TOOL_COMMANDS: { tool: ToolId; label: string; keys: string[]; hint:
   { tool: 'gradient', label: 'Degradê', keys: ['Shift+G'], hint: 'Arraste da cor primária para a secundária. Preenche a seleção ou a camada. Shift trava o ângulo.' },
   { tool: 'eyedropper', label: 'Conta-gotas', keys: ['I'], hint: 'Clique para pegar a cor. Alt com outra ferramenta também funciona.' },
   { tool: 'pan', label: 'Mão (mover vista)', keys: ['H'], hint: 'Arraste para mover a vista. Espaço também funciona.' },
+  { tool: 'spray', label: 'Spray', keys: ['A'], hint: 'Borrifa pixels soltos ao redor do cursor. O tamanho define o diâmetro.' },
+  { tool: 'contour', label: 'Contorno preenchido', keys: ['Shift+Q'], hint: 'Desenhe o contorno à mão livre; ao soltar, a área é preenchida.' },
+  { tool: 'curve', label: 'Curva', keys: ['Shift+L'], hint: 'Arraste a linha, depois arraste duas vezes para dobrar a curva. Esc cancela.' },
+  { tool: 'blur', label: 'Desfocar', keys: ['R'], hint: 'Suaviza os pixels sob o pincel. Passe de novo para desfocar mais.' },
+  { tool: 'jumble', label: 'Embaralhar', keys: ['J'], hint: 'Troca pixels de lugar com os vizinhos, bom para texturas como grama e areia.' },
+  { tool: 'select-ellipse', label: 'Seleção elíptica', keys: ['Shift+M'], hint: 'Shift adiciona, Alt subtrai, Shift+Alt intersecta.' },
 ];
 
 export function registerCommands(): void {
@@ -199,6 +205,29 @@ export function registerCommands(): void {
     { id: 'select.rotateCw', label: 'Girar seleção 90° horário', category: 'Seleção', run: () => attempt((s) => rotateSelected(s, 90)), enabled: hasDoc },
     { id: 'select.rotateCcw', label: 'Girar seleção 90° anti-horário', category: 'Seleção', run: () => attempt((s) => rotateSelected(s, 270)), enabled: hasDoc },
     { id: 'select.rotate180', label: 'Girar seleção 180°', category: 'Seleção', run: () => attempt((s) => rotateSelected(s, 180)), enabled: hasDoc },
+    {
+      id: 'brush.fromSelection',
+      label: 'Criar pincel a partir da seleção',
+      category: 'Ferramentas',
+      keys: ['Ctrl+B'],
+      run: () =>
+        attempt((s) => {
+          const brush = brushFromSelection(s);
+          ed().setOptions({ customBrush: brush });
+          const st = ed();
+          if (!['pencil', 'brush', 'eraser', 'line', 'rect', 'ellipse', 'curve'].includes(st.tool)) st.setTool('pencil');
+          st.toast('success', 'Pincel criado. Use "Pincel padrão" para voltar à ponta normal.');
+        }),
+      enabled: hasSel,
+    },
+    {
+      id: 'brush.reset',
+      label: 'Pincel padrão',
+      category: 'Ferramentas',
+      keys: ['Ctrl+Shift+B'],
+      run: () => ed().setOptions({ customBrush: null }),
+      enabled: () => !!ed().options.customBrush,
+    },
     { id: 'select.scale', label: 'Redimensionar seleção…', category: 'Seleção', keys: ['Ctrl+T'], run: () => ed().openDialog({ type: 'scale-selection' }), enabled: hasDoc },
     ...(
       [

@@ -1,6 +1,7 @@
 import { colorDistance, type RGBA } from '../raster/color';
 import type { PixelBuffer } from '../raster/pixel-buffer';
 import { type Point, type Rect, intersectRect, rectIsEmpty } from '../raster/rect';
+import { ellipseFilled } from '../raster/shapes';
 
 /**
  * A pixel selection: a bounding rectangle plus a per-pixel mask (1 = selected)
@@ -15,6 +16,16 @@ export type SelectionMode = 'replace' | 'add' | 'subtract' | 'intersect';
 
 export function rectSelection(r: Rect): Selection {
   return { bounds: { ...r }, mask: new Uint8Array(Math.max(0, r.w * r.h)).fill(1) };
+}
+
+/** Pixels of the ellipse inscribed in the rectangle (same raster as the ellipse tool). */
+export function ellipseSelection(r: Rect): Selection {
+  const mask = new Uint8Array(Math.max(0, r.w * r.h));
+  ellipseFilled(r.x, r.y, r.x + r.w - 1, r.y + r.h - 1, (x, y) => {
+    const i = (y - r.y) * r.w + (x - r.x);
+    if (x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h) mask[i] = 1;
+  });
+  return { bounds: { ...r }, mask };
 }
 
 export function isSelected(sel: Selection | null, x: number, y: number): boolean {

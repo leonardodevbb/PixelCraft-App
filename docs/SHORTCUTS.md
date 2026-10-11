@@ -63,6 +63,38 @@ Gestos que não são comandos:
 | Girar seleção 180° | — |
 | Redimensionar seleção… | <kbd>Ctrl+T</kbd> |
 
+## Ferramentas
+
+| Ação | Atalho |
+|---|---|
+| Criar pincel a partir da seleção | <kbd>Ctrl+B</kbd> |
+| Pincel padrão | <kbd>Ctrl+Shift+B</kbd> |
+| Lápis | <kbd>B</kbd> |
+| Pincel | <kbd>Shift+B</kbd> |
+| Borracha | <kbd>E</kbd> |
+| Balde de preenchimento | <kbd>G</kbd> |
+| Linha | <kbd>L</kbd> |
+| Retângulo | <kbd>U</kbd> |
+| Retângulo preenchido | <kbd>Shift+U</kbd> |
+| Elipse | <kbd>O</kbd> |
+| Elipse preenchida | <kbd>Shift+O</kbd> |
+| Seleção retangular | <kbd>M</kbd> |
+| Laço | <kbd>Q</kbd> |
+| Varinha mágica | <kbd>W</kbd> |
+| Mover | <kbd>V</kbd> |
+| Texto | <kbd>T</kbd> |
+| Degradê | <kbd>Shift+G</kbd> |
+| Conta-gotas | <kbd>I</kbd> |
+| Mão (mover vista) | <kbd>H</kbd> |
+| Spray | <kbd>A</kbd> |
+| Contorno preenchido | <kbd>Shift+Q</kbd> |
+| Curva | <kbd>Shift+L</kbd> |
+| Desfocar | <kbd>R</kbd> |
+| Embaralhar | <kbd>J</kbd> |
+| Seleção elíptica | <kbd>Shift+M</kbd> |
+| Aumentar tamanho da ponta | <kbd>]</kbd> |
+| Diminuir tamanho da ponta | <kbd>[</kbd> |
+
 ## Imagem
 
 | Ação | Atalho |
@@ -185,27 +217,3 @@ Gestos que não são comandos:
 | Primeiros passos | — |
 | Informações de diagnóstico | — |
 | Sobre o PixelCraft | — |
-
-## Ferramentas
-
-| Ação | Atalho |
-|---|---|
-| Lápis | <kbd>B</kbd> |
-| Pincel | <kbd>Shift+B</kbd> |
-| Borracha | <kbd>E</kbd> |
-| Balde de preenchimento | <kbd>G</kbd> |
-| Linha | <kbd>L</kbd> |
-| Retângulo | <kbd>U</kbd> |
-| Retângulo preenchido | <kbd>Shift+U</kbd> |
-| Elipse | <kbd>O</kbd> |
-| Elipse preenchida | <kbd>Shift+O</kbd> |
-| Seleção retangular | <kbd>M</kbd> |
-| Laço | <kbd>Q</kbd> |
-| Varinha mágica | <kbd>W</kbd> |
-| Mover | <kbd>V</kbd> |
-| Texto | <kbd>T</kbd> |
-| Degradê | <kbd>Shift+G</kbd> |
-| Conta-gotas | <kbd>I</kbd> |
-| Mão (mover vista) | <kbd>H</kbd> |
-| Aumentar tamanho da ponta | <kbd>]</kbd> |
-| Diminuir tamanho da ponta | <kbd>[</kbd> |

@@ -1,6 +1,7 @@
 import { constrainLine, constrainSquare, ellipseFilled, ellipseOutline, line, rectFilled, rectOutline } from '../../raster/shapes';
 import type { Point } from '../../raster/rect';
-import { Painter } from '../painter';
+import type { Painter } from '../painter';
+import { painterFor } from './paint-tools';
 import { EditorError } from '../session';
 import type { Tool, ToolHost, ToolId, ToolPointer } from './types';
 
@@ -27,23 +28,14 @@ class ShapeTool implements Tool {
   ) {}
 
   onDown(p: ToolPointer, host: ToolHost): void {
-    let draft;
     try {
-      draft = host.session.beginDraft();
+      host.session.beginDraft();
     } catch (e) {
       if (e instanceof EditorError) host.notify(e.message);
       return;
     }
     this.start = { x: p.x, y: p.y };
-    this.painter = new Painter(draft.buffer, {
-      color: host.color(p.slot),
-      size: host.options.size,
-      shape: host.options.shape,
-      mode: 'replace',
-      opacity: 1,
-      selection: host.session.selection,
-      symmetry: host.symmetryActive ? host.session.state.symmetry : null,
-    });
+    this.painter = painterFor(host, p, { mode: 'replace', erase: false, useOptions: false });
     this.draw(p, host);
   }
 

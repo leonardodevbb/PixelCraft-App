@@ -1,6 +1,6 @@
 import { eyedropperTool } from './eyedropper';
-import { bucketTool, lassoTool, magicWandTool, moveTool, rectSelectTool } from './fill-select-tools';
-import { brushTool, eraserTool, pencilTool } from './paint-tools';
+import { bucketTool, ellipseSelectTool, lassoTool, magicWandTool, moveTool, rectSelectTool } from './fill-select-tools';
+import { blurTool, brushTool, contourTool, curveTool, eraserTool, jumbleTool, pencilTool, sprayTool } from './paint-tools';
 import { ellipseFilledTool, ellipseTool, lineTool, rectFilledTool, rectTool } from './shape-tools';
 import { gradientTool, textTool } from './text-gradient-tools';
 import type { Tool, ToolId } from './types';
@@ -19,11 +19,17 @@ const TOOLS: Tool[] = [
   eyedropperTool,
   bucketTool,
   rectSelectTool,
+  ellipseSelectTool,
   lassoTool,
   magicWandTool,
   moveTool,
   textTool,
   gradientTool,
+  sprayTool,
+  contourTool,
+  curveTool,
+  blurTool,
+  jumbleTool,
 ];
 
 const BY_ID = new Map<ToolId, Tool>(TOOLS.map((t) => [t.id, t]));
