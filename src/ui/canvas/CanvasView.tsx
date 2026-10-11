@@ -31,7 +31,7 @@ function renderSettings(p: Preferences): RenderSettings {
     workspace: getComputedStyle(document.documentElement).getPropertyValue('--workspace').trim() || '#100e16',
     canvasBackground: null,
     showSymmetryAxes: p.showSymmetryAxes,
-    showGuides: true,
+    showGuides: p.showGuides,
     onion: { ...p.onion, beforeColor: '#ff4f81', afterColor: '#2ec4b6' },
   };
 }

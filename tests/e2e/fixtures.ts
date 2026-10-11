@@ -10,13 +10,13 @@ export interface Launched {
 }
 
 /** Starts the built app with isolated XDG directories. */
-export async function launch(opts: { args?: string[]; home?: string; tutorial?: boolean } = {}): Promise<Launched> {
+export async function launch(opts: { args?: string[]; home?: string; tutorial?: boolean; settings?: Record<string, unknown> } = {}): Promise<Launched> {
   const home = opts.home ?? mkdtempSync(join(tmpdir(), 'pixelcraft-e2e-'));
   // Fresh profiles skip the first-run tutorial unless a test asks for it.
   const settings = join(home, 'config', 'pixelcraft', 'settings.json');
   if (!existsSync(settings)) {
     mkdirSync(join(home, 'config', 'pixelcraft'), { recursive: true });
-    writeFileSync(settings, JSON.stringify({ showTutorial: !!opts.tutorial }));
+    writeFileSync(settings, JSON.stringify({ showTutorial: !!opts.tutorial, ...opts.settings }));
   }
   // PIXELCRAFT_E2E_EXECUTABLE runs the suite against a packaged build
   // (e.g. release/linux-unpacked/pixelcraft) instead of the dev checkout.

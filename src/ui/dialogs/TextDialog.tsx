@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { drawTextIntoDraft, textBounds } from '../../editor/text-ops';
+import { addLayerWithImage } from '../../editor/layer-ops';
+import { drawTextIntoDraft, textBounds, textImage } from '../../editor/text-ops';
+import { attempt } from '../../renderer/actions/edit';
 import { EditorError } from '../../editor/session';
 import { useEditor } from '../../renderer/state/editor-store';
-import { Button, NumberField, Select } from '../controls';
+import { Button, Checkbox, NumberField, Select } from '../controls';
 import { Dialog } from './Dialog';
 
 /**
@@ -19,6 +21,7 @@ export function TextDialog({ x: x0, y: y0 }: { x: number; y: number }) {
   const [text, setText] = useState('');
   const [pos, setPos] = useState({ x: x0, y: y0 });
   const [error, setError] = useState<string | null>(null);
+  const [newLayer, setNewLayer] = useState(false);
   const committed = useRef(false);
 
   const layout = { scale: options.textScale, letterSpacing: options.letterSpacing, lineSpacing: options.lineSpacing, align: options.textAlign };
@@ -44,8 +47,14 @@ export function TextDialog({ x: x0, y: y0 }: { x: number; y: number }) {
 
   const apply = (): void => {
     if (!session || !text) return;
-    committed.current = true;
-    session.commitDraft('Texto');
+    if (newLayer) {
+      session.cancelDraft();
+      const img = textImage(session.state.width, session.state.height, text, pos.x, pos.y, { ...layout, color });
+      attempt((s) => addLayerWithImage(s, text.split('\n')[0]!.slice(0, 40) || 'Texto', img, 0, 0, 'Texto em nova camada'));
+    } else {
+      committed.current = true;
+      session.commitDraft('Texto');
+    }
     close();
   };
   const b = textBounds(text || ' ', pos.x, pos.y, layout);
@@ -60,7 +69,7 @@ export function TextDialog({ x: x0, y: y0 }: { x: number; y: number }) {
       footer={
         <>
           <Button onClick={close}>Cancelar</Button>
-          <Button variant="primary" onClick={apply} disabled={!text || !!error} data-testid="text-apply">
+          <Button variant="primary" onClick={apply} disabled={!text || (!!error && !newLayer)} data-testid="text-apply">
             Aplicar
           </Button>
         </>
@@ -111,6 +120,7 @@ export function TextDialog({ x: x0, y: y0 }: { x: number; y: number }) {
         ]}
         onChange={(textAlign) => set({ textAlign })}
       />
+      <Checkbox label="Criar em uma nova camada" checked={newLayer} onChange={setNewLayer} hint="Deixa o texto separado do desenho, fácil de mover ou apagar depois." />
       <p className="muted small" data-testid="text-size">
         Bloco de {b.w}×{b.h} px em ({pos.x}, {pos.y}).
       </p>

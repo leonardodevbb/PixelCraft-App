@@ -43,6 +43,8 @@ test('no WCAG A/AA violations on the main screens', async () => {
     ['Control+Alt+i', 'resize-content-dialog', 'redimensionar'],
     ['Control+Alt+g', 'export-gif-dialog', 'exportar GIF'],
     ['Control+Alt+s', 'export-spritesheet-dialog', 'exportar spritesheet'],
+    ['Control+Alt+p', 'document-properties-dialog', 'propriedades'],
+    ['Control+Shift+r', 'recent-dialog', 'recentes'],
   ] as const) {
     await page.keyboard.press(key);
     await expect(page.getByTestId(id)).toBeVisible();
@@ -54,6 +56,7 @@ test('no WCAG A/AA violations on the main screens', async () => {
   for (const [menu, item, id] of [
     ['Imagem', 'Tiles e tileset…', 'tiles-dialog'],
     ['Ajuda', 'Sobre o PixelCraft', 'about-dialog'],
+    ['Ajuda', 'Informações de diagnóstico', 'diagnostics-dialog'],
   ] as const) {
     await page.getByRole('menuitem', { name: menu, exact: true }).click();
     await page.getByRole('menuitem', { name: item }).click();

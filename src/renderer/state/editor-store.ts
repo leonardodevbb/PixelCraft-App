@@ -30,6 +30,7 @@ export type DialogState =
   | { type: 'command-palette' }
   | { type: 'tutorial' }
   | { type: 'diagnostics' }
+  | { type: 'recent' }
   | { type: 'text'; x: number; y: number }
   | { type: 'tileset' }
   | { type: 'offset' }

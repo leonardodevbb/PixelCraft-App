@@ -630,3 +630,23 @@ button.layer-name:focus-visible {
 .tutorial-dots button.is-active {
   background: var(--accent);
 }
+
+.dialog-subtitle {
+  margin: 16px 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.guide-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+.guide-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0;
+}

@@ -15,6 +15,9 @@ import { AnimationExportDialog } from './AnimationExportDialog';
 import { TextDialog } from './TextDialog';
 import { TilesDialog } from './TilesDialog';
 import { TutorialDialog } from './TutorialDialog';
+import { RecentDialog } from './RecentDialog';
+import { DiagnosticsDialog } from './DiagnosticsDialog';
+import { DocumentPropertiesDialog } from './DocumentPropertiesDialog';
 
 export function DialogHost() {
   const d = useEditor((s) => s.dialog);
@@ -58,6 +61,12 @@ export function DialogHost() {
       return <CommandPalette />;
     case 'preferences':
       return <PreferencesDialog />;
+    case 'recent':
+      return <RecentDialog />;
+    case 'diagnostics':
+      return <DiagnosticsDialog />;
+    case 'document-properties':
+      return <DocumentPropertiesDialog />;
     case 'tutorial':
       return <TutorialDialog />;
     case 'tileset':

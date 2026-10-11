@@ -4,6 +4,7 @@ import { api } from './api';
 import { useEditor } from './state/editor-store';
 import { usePrefs } from './state/preferences';
 import { closeProject, openProjectDialog, save, saveAs } from './actions/documents';
+import { moveSelected } from '../editor/selection-ops';
 import { centerView, fitView, zoomStep, zoomTo } from './actions/view';
 import { attempt, copy, cut, deleteSelection, nudge, paste, selectAll } from './actions/edit';
 import { confirmDialog, promptDialog } from './state/editor-store';
@@ -17,6 +18,7 @@ import {
   linkCelToPrevious,
   moveFrame,
   reverseFrames,
+  setAnimation,
   setFrameDuration,
   setFrameTag,
   unlinkCel,
@@ -122,6 +124,8 @@ export function registerCommands(): void {
     { id: 'file.exportSheet', label: 'Exportar spritesheet…', category: 'Arquivo', keys: ['Ctrl+Alt+S'], run: () => ed().openDialog({ type: 'export-spritesheet' }), enabled: hasDoc },
     { id: 'file.exportTileset', label: 'Exportar tileset…', category: 'Arquivo', run: () => ed().openDialog({ type: 'tileset' }), enabled: hasDoc },
     { id: 'file.exportSequence', label: 'Exportar sequência de PNG…', category: 'Arquivo', run: () => ed().openDialog({ type: 'export-sequence' }), enabled: hasDoc },
+    { id: 'file.recent', label: 'Abrir recentes…', category: 'Arquivo', keys: ['Ctrl+Shift+R'], run: () => ed().openDialog({ type: 'recent' }) },
+    { id: 'file.properties', label: 'Propriedades do projeto…', category: 'Arquivo', keys: ['Ctrl+Alt+P'], run: () => ed().openDialog({ type: 'document-properties' }), enabled: hasDoc },
     { id: 'file.close', label: 'Fechar projeto', category: 'Arquivo', keys: ['Ctrl+W'], run: () => closeProject(), enabled: hasDoc },
     { id: 'file.newWindow', label: 'Nova janela', category: 'Arquivo', run: () => api.app.newWindow() },
 
@@ -155,6 +159,7 @@ export function registerCommands(): void {
     },
     { id: 'edit.copy', label: 'Copiar', category: 'Editar', keys: ['Ctrl+C'], run: () => void copy(false), enabled: hasDoc },
     { id: 'edit.copyMerged', label: 'Copiar mesclado', category: 'Editar', keys: ['Ctrl+Shift+C'], run: () => void copy(true), enabled: hasDoc },
+    { id: 'edit.duplicate', label: 'Duplicar seleção', category: 'Editar', keys: ['Ctrl+Shift+D'], run: () => attempt((s) => moveSelected(s, 1, 1, true)), enabled: hasSel },
     { id: 'edit.paste', label: 'Colar', category: 'Editar', keys: ['Ctrl+V'], run: () => void paste(false), enabled: hasDoc },
     { id: 'edit.pasteNewLayer', label: 'Colar em nova camada', category: 'Editar', keys: ['Ctrl+Shift+V'], run: () => void paste(true), enabled: hasDoc },
     { id: 'edit.delete', label: 'Apagar seleção', category: 'Editar', keys: ['Delete', 'Backspace'], run: () => deleteSelection(), enabled: hasDoc },
@@ -283,6 +288,35 @@ export function registerCommands(): void {
 
     // Animation
     { id: 'anim.play', label: 'Reproduzir / pausar', category: 'Animação', keys: ['Enter'], run: () => togglePlayback(), enabled: () => (ed().session?.state.frames.length ?? 0) > 1, checked: () => ed().playing },
+    {
+      id: 'anim.stop',
+      label: 'Parar (voltar ao primeiro quadro)',
+      category: 'Animação',
+      run: () => {
+        stopPlayback();
+        const s = ed().session;
+        if (s) s.setActiveFrame(s.state.frames[0]!.id);
+      },
+      enabled: hasDoc,
+    },
+    ...(['loop', 'once', 'pingpong'] as const).map(
+      (loop): Command => ({
+        id: `anim.loop.${loop}`,
+        label: { loop: 'Repetir sempre', once: 'Tocar uma vez', pingpong: 'Vai e volta' }[loop],
+        category: 'Animação',
+        run: () => attempt((s) => setAnimation(s, { loop })),
+        checked: () => ed().session?.state.animation.loop === loop,
+        enabled: hasDoc,
+      }),
+    ),
+    {
+      id: 'anim.direction',
+      label: 'Tocar ao contrário',
+      category: 'Animação',
+      run: () => attempt((s) => setAnimation(s, { direction: s.state.animation.direction === 'reverse' ? 'forward' : 'reverse' })),
+      checked: () => ed().session?.state.animation.direction === 'reverse',
+      enabled: hasDoc,
+    },
     { id: 'anim.prev', label: 'Quadro anterior', category: 'Animação', keys: [','], repeat: true, run: () => frameNav((s) => goToFrame(s, -1)), enabled: hasDoc },
     { id: 'anim.next', label: 'Próximo quadro', category: 'Animação', keys: ['.'], repeat: true, run: () => frameNav((s) => goToFrame(s, 1)), enabled: hasDoc },
     { id: 'anim.first', label: 'Primeiro quadro', category: 'Animação', keys: ['Home'], run: () => frameNav((s) => s.setActiveFrame(s.state.frames[0]!.id)), enabled: hasDoc },
@@ -383,6 +417,15 @@ export function registerCommands(): void {
       checked: () => prefs().prefs.tileGrid,
     },
     {
+      id: 'view.guides',
+      label: 'Mostrar guias',
+      category: 'Visualizar',
+      keys: ['Ctrl+;'],
+      run: () => prefs().set({ showGuides: !prefs().prefs.showGuides }),
+      checked: () => prefs().prefs.showGuides,
+    },
+    { id: 'view.editGuides', label: 'Guias e eixos de simetria…', category: 'Visualizar', run: () => ed().openDialog({ type: 'document-properties' }), enabled: hasDoc },
+    {
       id: 'view.tiledPreview',
       label: 'Mosaico (repetir a imagem ao redor)',
       category: 'Visualizar',
@@ -437,6 +480,7 @@ export function registerCommands(): void {
     { id: 'help.shortcuts', label: 'Atalhos de teclado', category: 'Ajuda', keys: ['F1'], run: () => ed().openDialog({ type: 'shortcuts' }) },
     { id: 'help.docs', label: 'Documentação online', category: 'Ajuda', run: () => api.app.openDocs('readme') },
     { id: 'help.tutorial', label: 'Primeiros passos', category: 'Ajuda', run: () => ed().openDialog({ type: 'tutorial' }) },
+    { id: 'help.diagnostics', label: 'Informações de diagnóstico', category: 'Ajuda', run: () => ed().openDialog({ type: 'diagnostics' }) },
     { id: 'help.about', label: 'Sobre o PixelCraft', category: 'Ajuda', run: () => ed().openDialog({ type: 'about' }) },
 
     // Tools

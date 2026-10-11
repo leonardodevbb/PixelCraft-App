@@ -7,25 +7,42 @@ pensado para quem está começando e rápido para quem já desenha sprites.
 Funciona offline, guarda os projetos apenas no seu computador e não tem
 telemetria.
 
-> Status: em desenvolvimento ativo. Veja o andamento por fase em
+> Versão 0.1.0. O que está pronto, o que falta e as próximas ideias estão em
 > [docs/ROADMAP.md](docs/ROADMAP.md).
 
-## Funcionalidades (Fase 1)
+## Funcionalidades
 
-* Canvas com grade lógica de pixels, zoom (12,5% a 12 800%) em torno do cursor,
-  pan (Espaço, botão do meio ou ferramenta Mão), ajustar à tela/largura/altura.
-* Lápis, pincel com opacidade, borracha, linha, retângulo e elipse (contorno e
-  preenchidos), conta-gotas. Shift trava ângulos/proporções; Alt desenha a
-  partir do centro; traços rápidos não deixam falhas.
-* Cores primária/secundária (botão esquerdo/direito), seletor HSV com HEX,
-  RGBA e HSL, cores recentes e paleta padrão "PixelCraft 32".
-* Simetria horizontal/vertical.
-* Desfazer/refazer por traço, com orçamento de memória.
-* Projetos `.pixelcraft` (ZIP versionado com manifesto JSON e PNG por imagem),
-  gravação atômica e verificada, lista de recentes com miniaturas.
-* Exportação PNG com transparência ou fundo sólido e escala inteira.
-* Salvamento automático em área de recuperação separada.
-* Temas escuro/claro/sistema, atalhos de teclado, tooltips com atalho.
+* **Desenho:** lápis, pincel com opacidade, borracha, linha, retângulo, elipse
+  (contorno e preenchidos), balde com tolerância, degradê linear/radial com
+  pontilhado ordenado, texto com fonte bitmap acentuada e conta-gotas. Simetria
+  horizontal e vertical. Shift trava ângulos e proporções.
+* **Seleção:** retangular, laço e varinha mágica (adicionar, subtrair,
+  intersectar), mover com Alt para duplicar, girar, espelhar e escalar a
+  seleção, copiar e colar com a área de transferência do sistema.
+* **Camadas:** grupos aninhados, opacidade, modos de mesclagem, bloqueio,
+  camadas de referência fora da exportação, etiquetas de cor, mesclar para
+  baixo ou tudo, arrastar e soltar.
+* **Animação:** linha do tempo com miniaturas, duração por quadro, FPS,
+  repetir, uma vez ou vai e volta, papel vegetal, marcadores de trecho,
+  células vinculadas e reprodução no canvas.
+* **Cores:** seletor HSV com HEX/RGBA/HSL, paletas incluídas e próprias,
+  importação e exportação GPL/HEX/JSON/JASC/ACT, análise de cores fora da
+  paleta e redução de cores.
+* **Imagem:** tamanho da tela com âncora, redimensionar, cortar, aparar, girar,
+  espelhar, deslocar com repetição, substituir cor.
+* **Tiles:** grade de tiles, modo mosaico para conferir emendas e exportação de
+  tileset sem repetições com mapa do Tiled (`.tmj`).
+* **Importar:** PNG, GIF animado, JPEG, WebP, BMP, imagem como camada e
+  spritesheet fatiada em quadros.
+* **Exportar:** PNG, JPEG, WebP e BMP em escala inteira, GIF animado,
+  spritesheet com JSON, sequência de PNG e tileset.
+* **Projetos `.pixelcraft`:** ZIP versionado e validado, gravação atômica,
+  recentes com miniatura, salvamento automático e recuperação após falhas.
+* **Fluxo:** paleta de comandos (Ctrl+K), atalhos configuráveis com detecção
+  de conflitos, histórico navegável, temas escuro, claro e do sistema,
+  primeiros passos para iniciantes.
+* **Privacidade e segurança:** funciona offline, sem telemetria, sem anúncios;
+  processo de interface isolado e arquivos acessíveis só quando você os escolhe.
 
 ## Requisitos
 
@@ -63,6 +80,7 @@ npm run package:flatpak    # release/PixelCraft-<versão>.flatpak
 * [Build dos pacotes Linux](docs/BUILD_LINUX.md)
 * [Testes](docs/TESTING.md)
 * [Atalhos](docs/SHORTCUTS.md)
+* [Primeiros passos](docs/TUTORIAL.md)
 * [Roadmap](docs/ROADMAP.md)
 * [Como contribuir](CONTRIBUTING.md)
 

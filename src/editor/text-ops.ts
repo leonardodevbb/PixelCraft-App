@@ -1,5 +1,6 @@
 import { PIXELCRAFT_SANS, renderText, type TextLayoutOptions } from '../raster/bitmap-font';
 import type { RGBA } from '../raster/color';
+import { PixelBuffer } from '../raster/pixel-buffer';
 import type { Rect } from '../raster/rect';
 import { Painter } from './painter';
 import type { EditorSession } from './session';
@@ -44,4 +45,13 @@ export function stampText(session: EditorSession, text: string, x: number, y: nu
   session.beginDraft();
   drawTextIntoDraft(session, text, x, y, opts);
   return session.commitDraft('Texto');
+}
+
+/** Text drawn alone on a transparent image of the given size (for a new layer). */
+export function textImage(width: number, height: number, text: string, x: number, y: number, opts: TextStampOptions): PixelBuffer {
+  const out = new PixelBuffer(width, height);
+  const m = renderText(text, PIXELCRAFT_SANS, opts);
+  for (let py = 0; py < m.height; py++)
+    for (let px = 0; px < m.width; px++) if (m.mask[py * m.width + px] && out.inBounds(x + px, y + py)) out.set(x + px, y + py, opts.color);
+  return out;
 }

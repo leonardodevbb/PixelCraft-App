@@ -5,7 +5,7 @@ export function buildMenus(): MenuDef[] {
   return [
     {
       label: 'Arquivo',
-      items: ['file.new', 'file.open', '-', 'file.save', 'file.saveAs', '-', 'file.importLayer', 'file.importSheet', '-', 'file.exportPng', 'file.exportGif', 'file.exportSheet', 'file.exportSequence', 'file.exportTileset', '-', 'file.newWindow', 'file.close'],
+      items: ['file.new', 'file.open', 'file.recent', '-', 'file.save', 'file.saveAs', '-', 'file.importLayer', 'file.importSheet', '-', 'file.exportPng', 'file.exportGif', 'file.exportSheet', 'file.exportSequence', 'file.exportTileset', '-', 'file.properties', '-', 'file.newWindow', 'file.close'],
     },
     {
       label: 'Editar',
@@ -18,6 +18,7 @@ export function buildMenus(): MenuDef[] {
         'edit.copyMerged',
         'edit.paste',
         'edit.pasteNewLayer',
+        'edit.duplicate',
         'edit.delete',
         'edit.fill',
         '-',
@@ -90,6 +91,8 @@ export function buildMenus(): MenuDef[] {
       label: 'Animação',
       items: [
         'anim.play',
+        'anim.stop',
+        { label: 'Modo de reprodução', items: ['anim.loop.loop', 'anim.loop.once', 'anim.loop.pingpong', '-', 'anim.direction'] },
         '-',
         'anim.first',
         'anim.prev',
@@ -129,6 +132,8 @@ export function buildMenus(): MenuDef[] {
         'view.pixelGrid',
         'view.tileGrid',
         'view.tiledPreview',
+        'view.guides',
+        'view.editGuides',
         '-',
         'view.rightPanel',
         'view.timeline',
@@ -138,7 +143,7 @@ export function buildMenus(): MenuDef[] {
     },
     {
       label: 'Ajuda',
-      items: ['help.tutorial', 'help.commandPalette', 'help.shortcuts', 'help.docs', '-', 'help.about'],
+      items: ['help.tutorial', 'help.commandPalette', 'help.shortcuts', 'help.docs', '-', 'help.diagnostics', 'help.about'],
     },
   ];
 }
