@@ -26,9 +26,11 @@ export function buildMenus(): MenuDef[] {
         'select.none',
         'select.invert',
         'select.fromLayer',
+        'select.byColor',
+        { label: 'Modificar seleção', items: ['select.expand', 'select.contract', 'select.border'] },
         {
           label: 'Transformar seleção',
-          items: ['select.flipH', 'select.flipV', '-', 'select.rotateCw', 'select.rotateCcw', 'select.rotate180', '-', 'select.scale'],
+          items: ['tool.transform', '-', 'select.flipH', 'select.flipV', '-', 'select.rotateCw', 'select.rotateCcw', 'select.rotate180', '-', 'select.scale'],
         },
         '-',
         'brush.fromSelection',

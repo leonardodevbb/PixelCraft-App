@@ -4,6 +4,7 @@ import type { DitherMode, GradientShape } from '../../raster/gradient';
 import type { EditorSession } from '../session';
 import type { Point, Rect } from '../../raster/rect';
 import type { CustomBrush, InkMode } from '../painter';
+import type { TransformAlgorithm } from '../../raster/transform';
 
 export type ToolId =
   | 'pencil'
@@ -28,7 +29,8 @@ export type ToolId =
   | 'curve'
   | 'blur'
   | 'jumble'
-  | 'select-ellipse';
+  | 'select-ellipse'
+  | 'transform';
 
 export type ColorSlot = 'primary' | 'secondary';
 
@@ -71,6 +73,8 @@ export interface ToolOptions {
   sprayDensity: number;
   /** Brush captured from a selection; replaces size and shape when set. */
   customBrush: CustomBrush | null;
+  /** How the transform tool resamples rotated and scaled pixels. */
+  transformAlgorithm: TransformAlgorithm;
 }
 
 export const DEFAULT_TOOL_OPTIONS: ToolOptions = {
@@ -90,6 +94,7 @@ export const DEFAULT_TOOL_OPTIONS: ToolOptions = {
   pixelPerfect: false,
   sprayDensity: 20,
   customBrush: null,
+  transformAlgorithm: 'rotsprite',
 };
 
 /** Transient visuals a tool can ask the canvas to draw. */
@@ -102,6 +107,8 @@ export interface ToolPreview {
   ellipse?: Rect | null;
   /** Control points of a curve being edited (start, c1, c2, end). */
   handles?: Point[] | null;
+  /** Corners of the piece being transformed (clockwise from top-left). */
+  transformBox?: Point[] | null;
 }
 
 export interface ToolHost {
@@ -116,6 +123,8 @@ export interface ToolHost {
   preview(p: ToolPreview): void;
   /** Text tool: asks the UI to open the text editor at a pixel. */
   requestText?(at: Point): void;
+  /** Screen pixels per document pixel, for hit-testing on-canvas handles. */
+  zoom?: number;
 }
 
 export interface Tool {
@@ -128,6 +137,12 @@ export interface Tool {
   cancel(host: ToolHost): void;
   /** The user switched to another tool: drop any half-finished work. */
   deactivate?(host: ToolHost): void;
+  /** The user switched to this tool. */
+  activate?(host: ToolHost): void;
+  /** True while the tool holds work that Enter would apply. */
+  isPending?(): boolean;
+  /** Applies the pending work (Enter). */
+  apply?(host: ToolHost): void;
   /** CSS cursor for the canvas. */
   cursor: string;
 }

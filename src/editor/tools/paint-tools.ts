@@ -292,7 +292,7 @@ abstract class FilterBrushTool implements Tool {
   random: () => number = Math.random;
   private last: Point | null = null;
 
-  protected abstract apply(x: number, y: number, host: ToolHost, footprint: Point[]): void;
+  protected abstract filter(x: number, y: number, host: ToolHost, footprint: Point[]): void;
 
   onDown(p: ToolPointer, host: ToolHost): void {
     if (!startDraft(host)) return;
@@ -309,7 +309,7 @@ abstract class FilterBrushTool implements Tool {
   private stamp(x: number, y: number, host: ToolHost): void {
     const o = host.options;
     const fp = brushFootprint(Math.max(1, o.size), o.shape);
-    this.apply(x, y, host, fp);
+    this.filter(x, y, host, fp);
     const r = Math.ceil(o.size / 2) + 1;
     host.session.touchDraft({ x: x - r, y: y - r, w: 2 * r + 1, h: 2 * r + 1 });
   }
@@ -334,7 +334,7 @@ class BlurTool extends FilterBrushTool {
   readonly id = 'blur' as const;
   readonly label = 'Desfocar';
 
-  protected apply(cx: number, cy: number, host: ToolHost, fp: Point[]): void {
+  protected filter(cx: number, cy: number, host: ToolHost, fp: Point[]): void {
     const buf = host.session.draft!.buffer;
     const sel = host.session.selection;
     const src = buf.clone();
@@ -376,7 +376,7 @@ class JumbleTool extends FilterBrushTool {
   readonly id = 'jumble' as const;
   readonly label = 'Embaralhar';
 
-  protected apply(cx: number, cy: number, host: ToolHost, fp: Point[]): void {
+  protected filter(cx: number, cy: number, host: ToolHost, fp: Point[]): void {
     const buf = host.session.draft!.buffer;
     const sel = host.session.selection;
     for (const o of fp) {

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { getTool, type ColorSlot, type Tool, type ToolHost, type ToolId, type ToolPointer } from '../../editor/tools';
 import { sampleColor } from '../../editor/tools/eyedropper';
+import { transformTool } from '../../editor/tools/transform-tool';
 import { brushFootprint } from '../../raster/shapes';
 import { toHex } from '../../raster/color';
 import { CanvasRenderer, type RenderSettings } from '../../renderer-engine/canvas-renderer';
@@ -56,10 +57,19 @@ function makeHost(r: CanvasRenderer): ToolHost {
       if (p.selectionOffset !== undefined) r.overlay.selectionOffset = p.selectionOffset;
       if (p.ellipse !== undefined) r.overlay.ellipse = p.ellipse;
       if (p.handles !== undefined) r.overlay.handles = p.handles;
+      if (p.transformBox !== undefined) r.overlay.transformBox = p.transformBox;
       r.request();
     },
     requestText: (at) => useEditor.getState().openDialog({ type: 'text', x: at.x, y: at.y }),
+    zoom: st.transform.zoom,
   };
+}
+
+let currentRenderer: CanvasRenderer | null = null;
+
+/** A tool host bound to the visible canvas, for UI outside it (options bar, commands). */
+export function canvasToolHost(): ToolHost | null {
+  return currentRenderer && useEditor.getState().session ? makeHost(currentRenderer) : null;
 }
 
 interface Interaction {
@@ -85,6 +95,7 @@ export function CanvasView() {
     const canvas = canvasRef.current!;
     const r = new CanvasRenderer(canvas, renderSettings(usePrefs.getState().prefs));
     rendererRef.current = r;
+    currentRenderer = r;
     r.transform = useEditor.getState().transform;
     const unsubEditor = useEditor.subscribe((s, prev) => {
       if (s.transform !== prev.transform) {
@@ -120,6 +131,7 @@ export function CanvasView() {
       unsubPrefs();
       ro.disconnect();
       r.dispose();
+      if (currentRenderer === r) currentRenderer = null;
     };
   }, []);
 
@@ -150,6 +162,7 @@ export function CanvasView() {
     let spaceUsed = false;
     let altDown = false;
     let lastHover: { x: number; y: number } | null = null;
+    let lastHoverF = { x: 0, y: 0 };
 
     const local = (e: { clientX: number; clientY: number }) => {
       const rect = canvas.getBoundingClientRect();
@@ -170,7 +183,12 @@ export function CanvasView() {
 
     const updateCursor = () => {
       const t = effectiveTool();
-      canvas.style.cursor = active?.kind === 'pan' ? 'grabbing' : spaceDown || t === 'pan' ? 'grab' : getTool(t)?.cursor ?? 'crosshair';
+      let toolCursor = getTool(t)?.cursor ?? 'crosshair';
+      if (t === 'transform' && lastHover && !active) {
+        const kind = transformTool.hit({ x: lastHoverF.x, y: lastHoverF.y }, useEditor.getState().transform.zoom);
+        toolCursor = kind === 'scale-handle' ? 'nwse-resize' : kind === 'rotate' ? 'alias' : kind === 'move' ? 'move' : 'default';
+      }
+      canvas.style.cursor = active?.kind === 'pan' ? 'grabbing' : spaceDown || t === 'pan' ? 'grab' : toolCursor;
     };
 
     const updateHover = (x: number, y: number) => {
@@ -232,7 +250,9 @@ export function CanvasView() {
         const events = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [];
         for (const ce of events.length ? events : [e]) active.tool!.onMove(toPointer(ce, active.slot), active.host!);
       }
+      lastHoverF = { x: p.fx, y: p.fy };
       updateHover(p.x, p.y);
+      if (!active && useEditor.getState().tool === 'transform') updateCursor();
     };
 
     const finish = (e: PointerEvent) => {
@@ -322,7 +342,10 @@ export function CanvasView() {
     };
     const unsubTool = useEditor.subscribe((s, prev) => {
       // Tools that keep state between gestures (the curve) drop it when left.
-      if (s.tool !== prev.tool && s.session) getTool(prev.tool)?.deactivate?.(makeHost(rendererRef.current!));
+      if (s.tool !== prev.tool && s.session) {
+        getTool(prev.tool)?.deactivate?.(makeHost(rendererRef.current!));
+        getTool(s.tool)?.activate?.(makeHost(rendererRef.current!));
+      }
       if (s.tool !== prev.tool || s.options !== prev.options || s.primary !== prev.primary) {
         updateCursor();
         if (lastHover) updateHover(lastHover.x, lastHover.y);
@@ -336,6 +359,16 @@ export function CanvasView() {
     canvas.addEventListener('pointerleave', onLeave);
     canvas.addEventListener('wheel', onWheel, { passive: false });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    // Enter applies a pending transform before it can reach the global shortcuts (play).
+    const onEnterCapture = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' || isTyping(e.target) || useEditor.getState().dialog) return;
+      const t = getTool(useEditor.getState().tool);
+      if (!t?.isPending?.() || !t.apply) return;
+      e.preventDefault();
+      e.stopPropagation();
+      t.apply(makeHost(rendererRef.current!));
+    };
+    window.addEventListener('keydown', onEnterCapture, true);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('blur', onBlur);
@@ -347,6 +380,7 @@ export function CanvasView() {
       canvas.removeEventListener('pointercancel', onCancel);
       canvas.removeEventListener('pointerleave', onLeave);
       canvas.removeEventListener('wheel', onWheel);
+      window.removeEventListener('keydown', onEnterCapture, true);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);

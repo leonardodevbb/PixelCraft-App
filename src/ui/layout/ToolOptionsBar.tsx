@@ -1,6 +1,11 @@
 import { TOOL_COMMANDS, commands } from '../../renderer/commands';
 import { useEditor } from '../../renderer/state/editor-store';
-import { Checkbox, NumberField, Select, Slider } from '../controls';
+import { useEffect, useState } from 'react';
+import { Checkbox, IconButton, NumberField, Select, Slider } from '../controls';
+import type { ToolHost } from '../../editor/tools';
+import { transformTool } from '../../editor/tools/transform-tool';
+import { TRANSFORM_ALGORITHM_LABELS, type TransformAlgorithm } from '../../raster/transform';
+import { canvasToolHost } from '../canvas/CanvasView';
 import type { ToolId } from '../../editor/tools';
 import { DITHER_LABELS, type DitherMode } from '../../raster/gradient';
 import { INK_LABELS, type InkMode } from '../../editor/painter';
@@ -19,6 +24,49 @@ const INK_HINTS: Record<InkMode, string> = {
   'lock-alpha': 'Só pinta onde já há pixels e mantém a transparência deles. Ótimo para sombrear dentro do contorno.',
   shading: 'Clareia ou escurece seguindo a ordem da paleta: botão esquerdo avança para a próxima cor, direito volta. Organize as cores da paleta em rampas.',
 };
+
+function TransformOptions() {
+  const [, force] = useState(0);
+  useEffect(() => transformTool.subscribe(() => force((n) => n + 1)), []);
+  const algorithm = useEditor((s) => s.options.transformAlgorithm);
+  const info = transformTool.info;
+  const host = (): ToolHost | null => canvasToolHost();
+  return (
+    <>
+      <Select<TransformAlgorithm>
+        label="Rotação"
+        value={algorithm}
+        options={(Object.keys(TRANSFORM_ALGORITHM_LABELS) as TransformAlgorithm[]).map((value) => ({ value, label: TRANSFORM_ALGORITHM_LABELS[value] }))}
+        onChange={(transformAlgorithm) => {
+          useEditor.getState().setOptions({ transformAlgorithm });
+          const h = host();
+          if (h) transformTool.refresh(h);
+        }}
+      />
+      {info ? (
+        <>
+          <NumberField label="Ângulo" value={info.angle} min={-180} max={180} integer={false} suffix="°" onChange={(angle) => host() && transformTool.setParams(host()!, { angle })} data-testid="transform-angle" />
+          <NumberField label="Largura" value={info.scaleX} min={-1000} max={1000} integer={false} suffix="%" onChange={(v) => host() && transformTool.setParams(host()!, { sx: v / 100 })} data-testid="transform-sx" />
+          <NumberField label="Altura" value={info.scaleY} min={-1000} max={1000} integer={false} suffix="%" onChange={(v) => host() && transformTool.setParams(host()!, { sy: v / 100 })} data-testid="transform-sy" />
+          <span className="muted">
+            {info.width}×{info.height} px
+          </span>
+          <IconButton icon="flip" label="Espelhar na horizontal" onClick={() => host() && transformTool.flip(host()!, 'h')} />
+          <button type="button" className="btn btn-primary" onClick={() => host() && transformTool.apply(host()!)} data-testid="transform-apply">
+            Aplicar
+          </button>
+          <button type="button" className="btn btn-ghost" onClick={() => host() && transformTool.cancel(host()!)}>
+            Cancelar
+          </button>
+        </>
+      ) : (
+        <button type="button" className="btn btn-ghost" onClick={() => host() && transformTool.begin(host()!)} data-testid="transform-begin">
+          Começar
+        </button>
+      )}
+    </>
+  );
+}
 
 /** Context options for the active tool. */
 export function ToolOptionsBar() {
@@ -117,6 +165,7 @@ export function ToolOptionsBar() {
           <NumberField label="Espaçamento" value={o.letterSpacing} min={0} max={16} onChange={(letterSpacing) => set({ letterSpacing })} suffix="px" />
         </>
       )}
+      {tool === 'transform' && <TransformOptions />}
       {tool === 'eyedropper' && (
         <Checkbox label="Amostrar composição visível" checked={o.sampleMerged} onChange={(sampleMerged) => set({ sampleMerged })} hint="Desmarcado: pega a cor apenas da camada ativa." />
       )}

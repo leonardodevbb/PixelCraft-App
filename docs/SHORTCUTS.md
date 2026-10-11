@@ -61,7 +61,11 @@ Gestos que não são comandos:
 | Girar seleção 90° horário | — |
 | Girar seleção 90° anti-horário | — |
 | Girar seleção 180° | — |
-| Redimensionar seleção… | <kbd>Ctrl+T</kbd> |
+| Expandir seleção… | — |
+| Contrair seleção… | — |
+| Borda da seleção… | — |
+| Selecionar a cor primária na camada | <kbd>Ctrl+Shift+A</kbd> |
+| Redimensionar seleção… | <kbd>Ctrl+Alt+T</kbd> |
 
 ## Ferramentas
 
@@ -91,6 +95,7 @@ Gestos que não são comandos:
 | Curva | <kbd>Shift+L</kbd> |
 | Desfocar | <kbd>R</kbd> |
 | Embaralhar | <kbd>J</kbd> |
+| Transformar | <kbd>Ctrl+T</kbd> |
 | Seleção elíptica | <kbd>Shift+M</kbd> |
 | Aumentar tamanho da ponta | <kbd>]</kbd> |
 | Diminuir tamanho da ponta | <kbd>[</kbd> |

@@ -249,3 +249,69 @@ export function opaqueSelection(img: PixelBuffer): Selection | null {
   for (let i = 0; i < mask.length; i++) mask[i] = img.data[i * 4 + 3] !== 0 ? 1 : 0;
   return trimSelection({ bounds: img.bounds, mask });
 }
+
+export type MorphShape = 'circle' | 'square';
+
+function morphOffsets(r: number, shape: MorphShape): Point[] {
+  const out: Point[] = [];
+  for (let dy = -r; dy <= r; dy++)
+    for (let dx = -r; dx <= r; dx++) if (shape === 'square' || dx * dx + dy * dy <= r * r + r * 0.8) out.push({ x: dx, y: dy });
+  return out;
+}
+
+/** Grows the selection by `r` pixels in every direction. */
+export function expandSelection(sel: Selection, r: number, shape: MorphShape = 'circle'): Selection {
+  r = Math.max(0, Math.floor(r));
+  if (r === 0) return sel;
+  const b = sel.bounds;
+  const bounds = { x: b.x - r, y: b.y - r, w: b.w + 2 * r, h: b.h + 2 * r };
+  const mask = new Uint8Array(bounds.w * bounds.h);
+  const offs = morphOffsets(r, shape);
+  for (let y = 0; y < b.h; y++)
+    for (let x = 0; x < b.w; x++) {
+      if (!sel.mask[y * b.w + x]) continue;
+      for (const o of offs) mask[(y + r + o.y) * bounds.w + (x + r + o.x)] = 1;
+    }
+  return { bounds, mask };
+}
+
+/** Shrinks the selection by `r` pixels; returns null when nothing is left. */
+export function contractSelection(sel: Selection, r: number, shape: MorphShape = 'circle'): Selection | null {
+  r = Math.max(0, Math.floor(r));
+  if (r === 0) return sel;
+  const b = sel.bounds;
+  const mask = new Uint8Array(b.w * b.h);
+  const offs = morphOffsets(r, shape);
+  for (let y = 0; y < b.h; y++)
+    for (let x = 0; x < b.w; x++) {
+      if (!sel.mask[y * b.w + x]) continue;
+      let keep = true;
+      for (const o of offs) {
+        const nx = x + o.x;
+        const ny = y + o.y;
+        if (nx < 0 || ny < 0 || nx >= b.w || ny >= b.h || !sel.mask[ny * b.w + nx]) {
+          keep = false;
+          break;
+        }
+      }
+      if (keep) mask[y * b.w + x] = 1;
+    }
+  return trimSelection({ bounds: { ...b }, mask });
+}
+
+/** Band of `r` pixels along the inside of the selection's edge. */
+export function borderSelection(sel: Selection, r: number, shape: MorphShape = 'circle'): Selection | null {
+  const inner = contractSelection(sel, r, shape);
+  return inner ? combineSelections(sel, inner, 'subtract') : trimSelection(sel);
+}
+
+/** Every pixel of `img` whose colour is within `tolerance` of `color` (not just connected ones). */
+export function colorSelection(img: PixelBuffer, color: RGBA, tolerance: number): Selection | null {
+  const mask = new Uint8Array(img.width * img.height);
+  for (let y = 0; y < img.height; y++)
+    for (let x = 0; x < img.width; x++) {
+      const c = img.get(x, y);
+      if (c === color || colorDistance(c, color) <= tolerance) mask[y * img.width + x] = 1;
+    }
+  return trimSelection({ bounds: img.bounds, mask });
+}

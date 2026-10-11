@@ -23,7 +23,8 @@ import {
   setFrameTag,
   unlinkCel,
 } from '../editor/frame-ops';
-import { invertSelection, opaqueSelection } from '../editor/selection';
+import { borderSelection, clipSelection, colorSelection, contractSelection, expandSelection, invertSelection, opaqueSelection } from '../editor/selection';
+import { PixelBuffer } from '../raster/pixel-buffer';
 import { brushFromSelection, flipSelectedH, flipSelectedV, rotateSelected } from '../editor/selection-ops';
 import { EditorError, type EditorSession } from '../editor/session';
 import {
@@ -113,6 +114,7 @@ export const TOOL_COMMANDS: { tool: ToolId; label: string; keys: string[]; hint:
   { tool: 'curve', label: 'Curva', keys: ['Shift+L'], hint: 'Arraste a linha, depois arraste duas vezes para dobrar a curva. Esc cancela.' },
   { tool: 'blur', label: 'Desfocar', keys: ['R'], hint: 'Suaviza os pixels sob o pincel. Passe de novo para desfocar mais.' },
   { tool: 'jumble', label: 'Embaralhar', keys: ['J'], hint: 'Troca pixels de lugar com os vizinhos, bom para texturas como grama e areia.' },
+  { tool: 'transform', label: 'Transformar', keys: ['Ctrl+T'], hint: 'Arraste dentro para mover, nas alças para redimensionar e perto dos cantos para girar. Enter aplica, Esc cancela.' },
   { tool: 'select-ellipse', label: 'Seleção elíptica', keys: ['Shift+M'], hint: 'Shift adiciona, Alt subtrai, Shift+Alt intersecta.' },
 ];
 
@@ -228,7 +230,45 @@ export function registerCommands(): void {
       run: () => ed().setOptions({ customBrush: null }),
       enabled: () => !!ed().options.customBrush,
     },
-    { id: 'select.scale', label: 'Redimensionar seleção…', category: 'Seleção', keys: ['Ctrl+T'], run: () => ed().openDialog({ type: 'scale-selection' }), enabled: hasDoc },
+    ...(
+      [
+        ['expand', 'Expandir seleção…', 'Expandir em quantos pixels?', expandSelection],
+        ['contract', 'Contrair seleção…', 'Contrair em quantos pixels?', contractSelection],
+        ['border', 'Borda da seleção…', 'Largura da borda em pixels', borderSelection],
+      ] as const
+    ).map(
+      ([key, label, question, fn]): Command => ({
+        id: `select.${key}`,
+        label,
+        category: 'Seleção',
+        run: async () => {
+          const v = await promptDialog({ title: label.replace('…', ''), label: question, initial: '1', confirmLabel: 'Aplicar' });
+          const n = Math.round(Number(v));
+          if (v === null || !Number.isFinite(n) || n < 1 || n > 100) return;
+          attempt((s) => {
+            if (!s.selection) throw new EditorError('Não há seleção.');
+            const next = fn(s.selection, n);
+            s.setSelection(next && clipSelection(next, s.state.width, s.state.height), label.replace('…', ''));
+          });
+        },
+        enabled: hasSel,
+      }),
+    ),
+    {
+      id: 'select.byColor',
+      label: 'Selecionar a cor primária na camada',
+      category: 'Seleção',
+      keys: ['Ctrl+Shift+A'],
+      run: () =>
+        attempt((s) => {
+          const img = s.celImage(s.activeLayerId, s.activeFrameId) ?? new PixelBuffer(s.state.width, s.state.height);
+          const sel = colorSelection(img, ed().primary, ed().options.tolerance);
+          if (!sel) throw new EditorError('A cor primária não aparece nesta camada.');
+          s.setSelection(sel, 'Selecionar por cor');
+        }),
+      enabled: hasDoc,
+    },
+    { id: 'select.scale', label: 'Redimensionar seleção…', category: 'Seleção', keys: ['Ctrl+Alt+T'], run: () => ed().openDialog({ type: 'scale-selection' }), enabled: hasDoc },
     ...(
       [
         ['Left', -1, 0, 'esquerda'],

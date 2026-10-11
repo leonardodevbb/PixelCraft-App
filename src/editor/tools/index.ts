@@ -3,6 +3,7 @@ import { bucketTool, ellipseSelectTool, lassoTool, magicWandTool, moveTool, rect
 import { blurTool, brushTool, contourTool, curveTool, eraserTool, jumbleTool, pencilTool, sprayTool } from './paint-tools';
 import { ellipseFilledTool, ellipseTool, lineTool, rectFilledTool, rectTool } from './shape-tools';
 import { gradientTool, textTool } from './text-gradient-tools';
+import { transformTool } from './transform-tool';
 import type { Tool, ToolId } from './types';
 
 export * from './types';
@@ -30,6 +31,7 @@ const TOOLS: Tool[] = [
   curveTool,
   blurTool,
   jumbleTool,
+  transformTool,
 ];
 
 const BY_ID = new Map<ToolId, Tool>(TOOLS.map((t) => [t.id, t]));
