@@ -50,3 +50,9 @@ export async function pixelToPage(page: Page, x: number, y: number): Promise<{ x
   const t = await page.evaluate(() => (window as unknown as { __pixelcraft: { transform(): { zoom: number; offsetX: number; offsetY: number } } }).__pixelcraft.transform());
   return { x: box.x + t.offsetX + (x + 0.5) * t.zoom, y: box.y + t.offsetY + (y + 0.5) * t.zoom };
 }
+
+/** Quits without the unsaved-changes prompt (tests leave documents dirty on purpose). */
+export async function quit(app: ElectronApplication): Promise<void> {
+  await app.evaluate(({ app: a }) => setTimeout(() => a.exit(0), 10)).catch(() => undefined);
+  await app.close().catch(() => undefined);
+}

@@ -45,6 +45,10 @@ const api: PixelCraftApi = {
     load: () => invoke(IPC.palettesLoad),
     save: (v) => invoke(IPC.palettesSave, v),
   },
+  clipboard: {
+    writePng: (data) => invoke(IPC.clipboardWritePng, data),
+    readPng: () => invoke(IPC.clipboardReadPng),
+  },
   recovery: {
     write: (id, meta, data) => invoke(IPC.recoveryWrite, id, meta, data),
     list: () => invoke(IPC.recoveryList),

@@ -32,6 +32,18 @@ export type DialogState =
   | { type: 'diagnostics' }
   | { type: 'text' }
   | { type: 'tileset' }
+  | { type: 'offset' }
+  | { type: 'replace-color' }
+  | { type: 'scale-selection' }
+  | { type: 'history' }
+  | {
+      type: 'prompt';
+      title: string;
+      label: string;
+      initial: string;
+      confirmLabel?: string;
+      resolve: (value: string | null) => void;
+    }
   | {
       type: 'confirm';
       title: string;
@@ -150,6 +162,21 @@ export function confirmDialog(opts: Omit<Extract<DialogState, { type: 'confirm' 
       resolve: (c) => {
         useEditor.getState().closeDialog();
         resolve(c);
+      },
+    });
+  });
+}
+
+/** Asks for a short text (Electron has no window.prompt). Resolves null on cancel. */
+export function promptDialog(opts: { title: string; label: string; initial?: string; confirmLabel?: string }): Promise<string | null> {
+  return new Promise((resolve) => {
+    useEditor.getState().openDialog({
+      type: 'prompt',
+      initial: '',
+      ...opts,
+      resolve: (v) => {
+        useEditor.getState().closeDialog();
+        resolve(v);
       },
     });
   });

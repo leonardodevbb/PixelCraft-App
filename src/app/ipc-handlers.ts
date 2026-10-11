@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeImage, shell, type IpcMainInvokeEvent } from 'electron';
 import { promises as fs } from 'node:fs';
 import { basename, extname, join } from 'node:path';
 import { z } from 'zod';
@@ -202,6 +202,23 @@ export function registerIpc(deps: HandlerDeps): void {
   handle(IPC.settingsSave, (_e, v: unknown) => writeJson(settingsFile, jsonValue.parse(v)));
   handle(IPC.palettesLoad, () => readJson(palettesFile));
   handle(IPC.palettesSave, (_e, v: unknown) => writeJson(palettesFile, jsonValue.parse(v)));
+
+  // Clipboard: images only, as PNG; capped so a huge clipboard can't exhaust memory.
+  const MAX_CLIPBOARD = 64 * 1024 * 1024;
+  handle(IPC.clipboardWritePng, (_e, data: unknown) => {
+    const bytes = bytesArg.refine((b) => b.length <= MAX_CLIPBOARD).parse(data);
+    const img = nativeImage.createFromBuffer(Buffer.from(bytes));
+    if (img.isEmpty()) throw new Error('Imagem inválida para a área de transferência.');
+    clipboard.writeImage(img);
+  });
+  handle(IPC.clipboardReadPng, () => {
+    const img = clipboard.readImage();
+    if (img.isEmpty()) return null;
+    const { width, height } = img.getSize();
+    if (width * height > 4096 * 4096) throw new Error('A imagem da área de transferência é grande demais.');
+    const png = img.toPNG();
+    return png.length > MAX_CLIPBOARD ? null : new Uint8Array(png);
+  });
 
   const recoveryId = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
   handle(IPC.recoveryWrite, (_e, id: unknown, meta: unknown, data: unknown) =>

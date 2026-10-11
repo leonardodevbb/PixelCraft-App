@@ -81,8 +81,11 @@ export function CanvasView() {
       if (s.revision !== prev.revision) r.request();
     });
     const unsubPrefs = usePrefs.subscribe((s) => {
-      r.settings = renderSettings(s.prefs);
-      r.invalidateOnion();
+      // Wait a frame so theme variables (read from CSS) are already applied.
+      requestAnimationFrame(() => {
+        r.settings = renderSettings(s.prefs);
+        r.invalidateOnion();
+      });
     });
     const ro = new ResizeObserver(() => {
       viewportSize.width = canvas.clientWidth;

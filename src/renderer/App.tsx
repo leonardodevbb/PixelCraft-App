@@ -1,7 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { CanvasView } from '../ui/canvas/CanvasView';
 import { DialogHost } from '../ui/dialogs/DialogHost';
 import { ColorPanel } from '../ui/panels/ColorPanel';
+import { HistoryPanel } from '../ui/panels/HistoryPanel';
+import { LayersPanel } from '../ui/panels/LayersPanel';
+import { PalettePanel } from '../ui/panels/PalettePanel';
 import { PreviewPanel } from '../ui/panels/PreviewPanel';
 import { StartScreen } from '../ui/StartScreen';
 import { StatusBar } from '../ui/layout/StatusBar';
@@ -11,6 +14,8 @@ import { TopBar } from '../ui/layout/TopBar';
 import { Toasts } from '../ui/Toasts';
 import { TooltipLayer } from '../ui/Tooltip';
 import { api } from './api';
+import { composeFrame } from '../layers/compose';
+import { allLayers, findLayer } from '../project/model';
 import { commands, registerCommands } from './commands';
 import { autosave, handleCloseRequest, openPath } from './actions/documents';
 import { useEditor } from './state/editor-store';
@@ -106,6 +111,8 @@ export function App() {
             <aside className="side-panel" style={{ width: rightWidth }} aria-label="Painéis">
               <PreviewPanel />
               <ColorPanel />
+              <PalettePanel />
+              <SideTabs />
             </aside>
           )}
         </div>
@@ -120,6 +127,24 @@ export function App() {
   );
 }
 
+/** Layers and history share the lower part of the side panel. */
+function SideTabs() {
+  const [tab, setTab] = useState<'layers' | 'history'>('layers');
+  return (
+    <div className="side-tabs">
+      <div className="tabs" role="tablist" aria-label="Painéis inferiores">
+        <button type="button" role="tab" aria-selected={tab === 'layers'} className={tab === 'layers' ? 'is-active' : ''} onClick={() => setTab('layers')} data-testid="tab-layers">
+          Camadas
+        </button>
+        <button type="button" role="tab" aria-selected={tab === 'history'} className={tab === 'history' ? 'is-active' : ''} onClick={() => setTab('history')} data-testid="tab-history">
+          Histórico
+        </button>
+      </div>
+      {tab === 'layers' ? <LayersPanel /> : <HistoryPanel />}
+    </div>
+  );
+}
+
 /** Read-only inspection hook used by automated UI tests and diagnostics. */
 (window as unknown as { __pixelcraft: unknown }).__pixelcraft = {
   transform: () => useEditor.getState().transform,
@@ -129,6 +154,26 @@ export function App() {
   },
   state: () => {
     const s = useEditor.getState().session;
-    return s ? { width: s.state.width, height: s.state.height, layers: s.state.layers.length, frames: s.state.frames.length, dirty: s.isDirty, path: s.filePath } : null;
+    if (!s) return null;
+    const layers = allLayers(s.state.layers);
+    return {
+      width: s.state.width,
+      height: s.state.height,
+      layers: s.state.layers.length,
+      layerNames: layers.map((l) => l.name),
+      activeLayer: findLayer(s.state.layers, s.activeLayerId)?.layer.name ?? null,
+      frames: s.state.frames.length,
+      dirty: s.isDirty,
+      path: s.filePath,
+      selection: s.selection ? { ...s.selection.bounds, area: s.selection.mask.reduce((a, b) => a + b, 0) } : null,
+      palette: s.state.palette.colors.length,
+      history: s.history.entries.map((e) => e.label),
+      tool: useEditor.getState().tool,
+    };
+  },
+  /** Pixel of the visible composite of the active frame. */
+  composite: (x: number, y: number) => {
+    const s = useEditor.getState().session;
+    return s ? composeFrame(s.state, s.lookup, s.activeFrameId).get(x, y) : null;
   },
 };

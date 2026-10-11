@@ -3,7 +3,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { decodePng } from '../../src/import-export/png';
 import { deserializeProject } from '../../src/project/serialize';
-import { launch, pixelToPage, stubOpenDialog, stubSaveDialog } from './fixtures';
+import { launch, pixelToPage, quit, stubOpenDialog, stubSaveDialog } from './fixtures';
 
 const pixel = (page: Page, x: number, y: number) =>
   page.evaluate(([px, py]) => (window as unknown as { __pixelcraft: { pixel(x: number, y: number): number } }).__pixelcraft.pixel(px!, py!), [x, y]);
@@ -108,7 +108,7 @@ test('create, draw, save, reopen and export a sprite', async () => {
   await expect(page.locator('.dirty-dot')).toHaveCount(0);
   const again = deserializeProject(new Uint8Array(readFileSync(projectPath)));
   expect([...again.images.values()][0]!.get(15, 15)).toBe(0xe8434fff);
-  await app.close();
+  await quit(app);
 });
 
 test('opens a project through the open dialog and rejects invalid files', async () => {
@@ -119,7 +119,7 @@ test('opens a project through the open dialog and rejects invalid files', async 
   await page.getByTestId('start-open').click();
   await expect(page.getByTestId('toast-error')).toContainText('Não foi possível abrir');
   await expect(page.getByTestId('start-screen')).toBeVisible();
-  await app.close();
+  await quit(app);
 });
 
 test('asks before discarding unsaved changes', async () => {
@@ -134,5 +134,5 @@ test('asks before discarding unsaved changes', async () => {
   await page.keyboard.press('Control+w');
   await page.getByTestId('confirm-alt').click();
   await expect(page.getByTestId('start-screen')).toBeVisible();
-  await app.close();
+  await quit(app);
 });

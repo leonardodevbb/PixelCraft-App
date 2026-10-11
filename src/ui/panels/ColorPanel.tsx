@@ -33,8 +33,6 @@ function Swatch({ color, label, onPick, testId, selected }: { color: RGBA; label
 export function ColorPanel() {
   const primary = useEditor((s) => s.primary);
   const secondary = useEditor((s) => s.secondary);
-  const session = useEditor((s) => s.session);
-  useEditor((s) => s.revision);
   const recent = usePrefs((s) => s.prefs.recentColors);
   const [editing, setEditing] = useState<'primary' | 'secondary'>('primary');
   const setColor = useEditor.getState().setColor;
@@ -43,7 +41,6 @@ export function ColorPanel() {
     setColor(slot, c);
     pushRecentColor(c);
   };
-  const palette = session?.state.palette;
 
   return (
     <Section title="Cores">
@@ -73,16 +70,6 @@ export function ColorPanel() {
           <div className="swatch-row">
             {recent.map((c) => (
               <Swatch key={c} color={c} onPick={pick(c)} />
-            ))}
-          </div>
-        </div>
-      )}
-      {palette && (
-        <div className="palette">
-          <span className="mini-title">{palette.name}</span>
-          <div className="swatch-grid" data-testid="palette-grid">
-            {palette.colors.map((c, i) => (
-              <Swatch key={`${i}-${c}`} color={c} onPick={pick(c)} selected={c === primary} testId={`palette-${i}`} />
             ))}
           </div>
         </div>

@@ -5,23 +5,76 @@ import { useEditor } from './state/editor-store';
 import { usePrefs } from './state/preferences';
 import { closeProject, openProjectDialog, save, saveAs } from './actions/documents';
 import { centerView, fitView, zoomStep, zoomTo } from './actions/view';
+import { attempt, copy, cut, deleteSelection, nudge, paste, selectAll } from './actions/edit';
+import { confirmDialog } from './state/editor-store';
+import { invertSelection, opaqueSelection } from '../editor/selection';
+import { flipSelectedH, flipSelectedV, rotateSelected } from '../editor/selection-ops';
+import { EditorError } from '../editor/session';
+import {
+  centerContent,
+  clearCels,
+  cropToSelection,
+  fillCels,
+  flipDocument,
+  invertCels,
+  rotateDocument,
+  trimDocument,
+} from '../editor/doc-ops';
+import {
+  addGroup,
+  addLayer,
+  deleteLayer,
+  duplicateLayer,
+  groupLayer,
+  layerBelow,
+  layerFromSelection,
+  mergeDown,
+  mergeVisible,
+  setLayerProps,
+  stepLayer,
+  ungroup,
+} from '../editor/layer-ops';
+import { findLayer } from '../project/model';
+import { panelRows } from '../layers/tree';
+import { exportPaletteFile, importPaletteFile } from '../ui/panels/PalettePanel';
 
 export const commands = new CommandRegistry();
 
 const ed = () => useEditor.getState();
 const hasDoc = (): boolean => !!ed().session;
 const prefs = () => usePrefs.getState();
+const hasSel = (): boolean => !!ed().session?.selection;
+const activeLayer = () => {
+  const s = ed().session;
+  return s ? findLayer(s.state.layers, s.activeLayerId)?.layer : undefined;
+};
+const activeIsGroup = (): boolean => activeLayer()?.type === 'group';
+
+/** Moves the active-layer focus through the panel order (top-most first). */
+function selectAdjacentLayer(dir: 1 | -1): void {
+  const s = ed().session;
+  if (!s) return;
+  const rows = panelRows(s.state.layers);
+  const i = rows.findIndex((r) => r.layer.id === s.activeLayerId);
+  const next = rows[i + dir];
+  if (next) s.setActiveLayer(next.layer.id);
+}
 
 /** Tool shortcuts and labels; shared by the toolbar and menus. */
 export const TOOL_COMMANDS: { tool: ToolId; label: string; keys: string[]; hint: string }[] = [
   { tool: 'pencil', label: 'Lápis', keys: ['B'], hint: 'Desenha pixels sólidos. Botão direito usa a cor secundária.' },
   { tool: 'brush', label: 'Pincel', keys: ['Shift+B'], hint: 'Desenha com opacidade e ponta redonda.' },
   { tool: 'eraser', label: 'Borracha', keys: ['E'], hint: 'Apaga para transparência na camada ativa.' },
+  { tool: 'bucket', label: 'Balde de preenchimento', keys: ['G'], hint: 'Preenche área de cor parecida. Respeita a seleção e a tolerância.' },
   { tool: 'line', label: 'Linha', keys: ['L'], hint: 'Arraste para traçar. Shift trava em 0°, 45° e 90°.' },
   { tool: 'rect', label: 'Retângulo', keys: ['U'], hint: 'Contorno. Shift: quadrado. Alt: a partir do centro.' },
   { tool: 'rect-filled', label: 'Retângulo preenchido', keys: ['Shift+U'], hint: 'Shift: quadrado. Alt: a partir do centro.' },
   { tool: 'ellipse', label: 'Elipse', keys: ['O'], hint: 'Contorno. Shift: círculo. Alt: a partir do centro.' },
   { tool: 'ellipse-filled', label: 'Elipse preenchida', keys: ['Shift+O'], hint: 'Shift: círculo. Alt: a partir do centro.' },
+  { tool: 'select-rect', label: 'Seleção retangular', keys: ['M'], hint: 'Shift adiciona, Alt subtrai, Shift+Alt intersecta. Clique simples desseleciona.' },
+  { tool: 'select-lasso', label: 'Laço', keys: ['Q'], hint: 'Desenhe o contorno à mão livre. Shift adiciona, Alt subtrai.' },
+  { tool: 'magic-wand', label: 'Varinha mágica', keys: ['W'], hint: 'Seleciona cores parecidas. Shift adiciona, Alt subtrai.' },
+  { tool: 'move', label: 'Mover', keys: ['V'], hint: 'Move a seleção (ou a camada). Alt duplica, Ctrl move só o contorno. Setas: 1 px.' },
   { tool: 'eyedropper', label: 'Conta-gotas', keys: ['I'], hint: 'Clique para pegar a cor. Alt com outra ferramenta também funciona.' },
   { tool: 'pan', label: 'Mão (mover vista)', keys: ['H'], hint: 'Arraste para mover a vista. Espaço também funciona.' },
 ];
@@ -35,7 +88,7 @@ export function registerCommands(): void {
     { id: 'file.saveAs', label: 'Salvar como…', category: 'Arquivo', keys: ['Ctrl+Shift+S'], run: () => void saveAs(), enabled: hasDoc },
     { id: 'file.exportPng', label: 'Exportar PNG…', category: 'Arquivo', keys: ['Ctrl+Shift+E'], run: () => ed().openDialog({ type: 'export-png' }), enabled: hasDoc },
     { id: 'file.close', label: 'Fechar projeto', category: 'Arquivo', keys: ['Ctrl+W'], run: () => closeProject(), enabled: hasDoc },
-    { id: 'file.newWindow', label: 'Nova janela', category: 'Arquivo', keys: ['Ctrl+Shift+N'], run: () => api.app.newWindow() },
+    { id: 'file.newWindow', label: 'Nova janela', category: 'Arquivo', run: () => api.app.newWindow() },
 
     // Edit
     {
@@ -57,6 +110,147 @@ export function registerCommands(): void {
       enabled: () => !!ed().session?.history.canRedo,
     },
 
+    {
+      id: 'edit.cut',
+      label: 'Recortar',
+      category: 'Editar',
+      keys: ['Ctrl+X'],
+      run: () => void cut(),
+      enabled: hasDoc,
+    },
+    { id: 'edit.copy', label: 'Copiar', category: 'Editar', keys: ['Ctrl+C'], run: () => void copy(false), enabled: hasDoc },
+    { id: 'edit.copyMerged', label: 'Copiar mesclado', category: 'Editar', keys: ['Ctrl+Shift+C'], run: () => void copy(true), enabled: hasDoc },
+    { id: 'edit.paste', label: 'Colar', category: 'Editar', keys: ['Ctrl+V'], run: () => void paste(false), enabled: hasDoc },
+    { id: 'edit.pasteNewLayer', label: 'Colar em nova camada', category: 'Editar', keys: ['Ctrl+Shift+V'], run: () => void paste(true), enabled: hasDoc },
+    { id: 'edit.delete', label: 'Apagar seleção', category: 'Editar', keys: ['Delete', 'Backspace'], run: () => deleteSelection(), enabled: hasDoc },
+    {
+      id: 'edit.fill',
+      label: 'Preencher seleção com a cor primária',
+      category: 'Editar',
+      keys: ['Alt+Backspace'],
+      run: () => attempt((s) => fillCels(s, ed().primary, 'cel')),
+      enabled: hasDoc,
+    },
+    { id: 'select.all', label: 'Selecionar tudo', category: 'Seleção', keys: ['Ctrl+A'], run: () => selectAll(), enabled: hasDoc },
+    { id: 'select.none', label: 'Desselecionar', category: 'Seleção', keys: ['Ctrl+D'], run: () => attempt((s) => s.setSelection(null)), enabled: hasSel },
+    {
+      id: 'select.invert',
+      label: 'Inverter seleção',
+      category: 'Seleção',
+      keys: ['Ctrl+Shift+I'],
+      run: () => attempt((s) => s.setSelection(invertSelection(s.selection, s.state.width, s.state.height), 'Inverter seleção')),
+      enabled: hasDoc,
+    },
+    {
+      id: 'select.fromLayer',
+      label: 'Selecionar conteúdo da camada',
+      category: 'Seleção',
+      run: () =>
+        attempt((s) => {
+          const img = s.celImage(s.activeLayerId, s.activeFrameId);
+          const sel = img ? opaqueSelection(img) : null;
+          if (!sel) throw new EditorError('A camada está vazia neste quadro.');
+          s.setSelection(sel, 'Selecionar conteúdo');
+        }),
+      enabled: hasDoc,
+    },
+    { id: 'select.flipH', label: 'Espelhar seleção horizontalmente', category: 'Seleção', run: () => attempt((s) => flipSelectedH(s)), enabled: hasDoc },
+    { id: 'select.flipV', label: 'Espelhar seleção verticalmente', category: 'Seleção', run: () => attempt((s) => flipSelectedV(s)), enabled: hasDoc },
+    { id: 'select.rotateCw', label: 'Girar seleção 90° horário', category: 'Seleção', run: () => attempt((s) => rotateSelected(s, 90)), enabled: hasDoc },
+    { id: 'select.rotateCcw', label: 'Girar seleção 90° anti-horário', category: 'Seleção', run: () => attempt((s) => rotateSelected(s, 270)), enabled: hasDoc },
+    { id: 'select.rotate180', label: 'Girar seleção 180°', category: 'Seleção', run: () => attempt((s) => rotateSelected(s, 180)), enabled: hasDoc },
+    { id: 'select.scale', label: 'Redimensionar seleção…', category: 'Seleção', keys: ['Ctrl+T'], run: () => ed().openDialog({ type: 'scale-selection' }), enabled: hasDoc },
+    ...(
+      [
+        ['Left', -1, 0, 'esquerda'],
+        ['Right', 1, 0, 'direita'],
+        ['Up', 0, -1, 'cima'],
+        ['Down', 0, 1, 'baixo'],
+      ] as const
+    ).flatMap(([key, dx, dy, name]): Command[] => [
+      { id: `select.nudge${key}`, label: `Mover 1 px para ${name}`, category: 'Seleção', keys: [key], repeat: true, hidden: true, run: () => nudge(dx, dy), enabled: hasDoc },
+      { id: `select.nudge${key}10`, label: `Mover 10 px para ${name}`, category: 'Seleção', keys: [`Shift+${key}`], repeat: true, hidden: true, run: () => nudge(dx * 10, dy * 10), enabled: hasDoc },
+    ]),
+    { id: 'edit.preferences', label: 'Preferências…', category: 'Editar', keys: ['Ctrl+,'], run: () => ed().openDialog({ type: 'preferences' }) },
+
+    // Image
+    { id: 'image.resizeCanvas', label: 'Tamanho da tela…', category: 'Imagem', keys: ['Ctrl+Alt+C'], run: () => ed().openDialog({ type: 'resize-canvas' }), enabled: hasDoc },
+    { id: 'image.resize', label: 'Redimensionar imagem…', category: 'Imagem', keys: ['Ctrl+Alt+I'], run: () => ed().openDialog({ type: 'resize-content' }), enabled: hasDoc },
+    { id: 'image.crop', label: 'Recortar para a seleção', category: 'Imagem', run: () => attempt((s) => cropToSelection(s)), enabled: hasSel },
+    { id: 'image.trim', label: 'Aparar bordas transparentes', category: 'Imagem', run: () => attempt((s) => trimDocument(s)), enabled: hasDoc },
+    { id: 'image.rotateCw', label: 'Girar 90° horário', category: 'Imagem', run: () => attempt((s) => rotateDocument(s, 90)), enabled: hasDoc },
+    { id: 'image.rotateCcw', label: 'Girar 90° anti-horário', category: 'Imagem', run: () => attempt((s) => rotateDocument(s, 270)), enabled: hasDoc },
+    { id: 'image.rotate180', label: 'Girar 180°', category: 'Imagem', run: () => attempt((s) => rotateDocument(s, 180)), enabled: hasDoc },
+    { id: 'image.flipH', label: 'Espelhar horizontalmente', category: 'Imagem', run: () => attempt((s) => flipDocument(s, 'h')), enabled: hasDoc },
+    { id: 'image.flipV', label: 'Espelhar verticalmente', category: 'Imagem', run: () => attempt((s) => flipDocument(s, 'v')), enabled: hasDoc },
+    { id: 'image.offset', label: 'Deslocar…', category: 'Imagem', keys: ['Shift+X'], run: () => ed().openDialog({ type: 'offset' }), enabled: hasDoc },
+    { id: 'image.center', label: 'Centralizar conteúdo da camada', category: 'Imagem', run: () => attempt((s) => centerContent(s, 'cel')), enabled: hasDoc },
+    { id: 'image.invert', label: 'Inverter cores', category: 'Imagem', keys: ['Ctrl+I'], run: () => attempt((s) => invertCels(s, 'cel')), enabled: hasDoc },
+    { id: 'image.replaceColor', label: 'Substituir cor…', category: 'Imagem', keys: ['Shift+R'], run: () => ed().openDialog({ type: 'replace-color' }), enabled: hasDoc },
+    { id: 'image.clearLayer', label: 'Limpar camada', category: 'Imagem', run: () => attempt((s) => clearCels(s, 'cel')), enabled: hasDoc },
+    { id: 'image.clearFrame', label: 'Limpar quadro (todas as camadas)', category: 'Imagem', run: () => attempt((s) => clearCels(s, 'frame')), enabled: hasDoc },
+    {
+      id: 'image.clearAll',
+      label: 'Limpar documento inteiro…',
+      category: 'Imagem',
+      run: async () => {
+        const c = await confirmDialog({
+          title: 'Limpar documento',
+          message: 'Apagar os pixels de todas as camadas desbloqueadas em todos os quadros? É possível desfazer com Ctrl+Z.',
+          confirmLabel: 'Limpar tudo',
+          danger: true,
+        });
+        if (c === 'confirm') attempt((s) => clearCels(s, 'all'));
+      },
+      enabled: hasDoc,
+    },
+
+    // Layer
+    { id: 'layer.new', label: 'Nova camada', category: 'Camada', keys: ['Ctrl+Shift+N'], run: () => attempt((s) => addLayer(s)), enabled: hasDoc },
+    { id: 'layer.newGroup', label: 'Novo grupo', category: 'Camada', run: () => attempt((s) => addGroup(s)), enabled: hasDoc },
+    { id: 'layer.group', label: 'Agrupar camada', category: 'Camada', keys: ['Ctrl+G'], run: () => attempt((s) => groupLayer(s)), enabled: hasDoc },
+    { id: 'layer.ungroup', label: 'Desagrupar', category: 'Camada', keys: ['Ctrl+Shift+G'], run: () => attempt((s) => ungroup(s)), enabled: activeIsGroup },
+    { id: 'layer.duplicate', label: 'Duplicar camada', category: 'Camada', keys: ['Ctrl+J'], run: () => attempt((s) => duplicateLayer(s)), enabled: hasDoc },
+    { id: 'layer.delete', label: 'Excluir camada', category: 'Camada', keys: ['Ctrl+Shift+Delete'], run: () => attempt((s) => deleteLayer(s)), enabled: hasDoc },
+    { id: 'layer.rename', label: 'Propriedades da camada…', category: 'Camada', keys: ['F2'], run: () => attempt((s) => ed().openDialog({ type: 'layer-properties', layerId: s.activeLayerId })), enabled: hasDoc },
+    { id: 'layer.mergeDown', label: 'Mesclar para baixo', category: 'Camada', keys: ['Ctrl+E'], run: () => attempt((s) => mergeDown(s)), enabled: () => !!ed().session && !!layerBelow(ed().session!) },
+    { id: 'layer.mergeVisible', label: 'Mesclar visíveis', category: 'Camada', keys: ['Ctrl+Alt+E'], run: () => attempt((s) => mergeVisible(s)), enabled: hasDoc },
+    { id: 'layer.up', label: 'Subir camada', category: 'Camada', keys: ['Ctrl+]'], run: () => attempt((s) => stepLayer(s, s.activeLayerId, 1)), enabled: hasDoc },
+    { id: 'layer.down', label: 'Descer camada', category: 'Camada', keys: ['Ctrl+['], run: () => attempt((s) => stepLayer(s, s.activeLayerId, -1)), enabled: hasDoc },
+    { id: 'layer.selectAbove', label: 'Selecionar camada acima', category: 'Camada', keys: ['Alt+]'], run: () => selectAdjacentLayer(-1), enabled: hasDoc },
+    { id: 'layer.selectBelow', label: 'Selecionar camada abaixo', category: 'Camada', keys: ['Alt+['], run: () => selectAdjacentLayer(1), enabled: hasDoc },
+    {
+      id: 'layer.toggleVisible',
+      label: 'Mostrar/ocultar camada',
+      category: 'Camada',
+      run: () => attempt((s) => setLayerProps(s, s.activeLayerId, { visible: !activeLayer()!.visible }, 'Visibilidade da camada')),
+      enabled: hasDoc,
+      checked: () => !!activeLayer()?.visible,
+    },
+    {
+      id: 'layer.toggleLock',
+      label: 'Bloquear camada',
+      category: 'Camada',
+      run: () => attempt((s) => setLayerProps(s, s.activeLayerId, { locked: !activeLayer()!.locked }, 'Bloqueio da camada')),
+      enabled: hasDoc,
+      checked: () => !!activeLayer()?.locked,
+    },
+    {
+      id: 'layer.toggleExport',
+      label: 'Incluir nas exportações',
+      category: 'Camada',
+      run: () => attempt((s) => setLayerProps(s, s.activeLayerId, { exportable: !activeLayer()!.exportable }, 'Exportação da camada')),
+      enabled: hasDoc,
+      checked: () => !!activeLayer()?.exportable,
+    },
+    { id: 'layer.fromSelectionCopy', label: 'Nova camada por cópia da seleção', category: 'Camada', keys: ['Ctrl+Alt+J'], run: () => attempt((s) => layerFromSelection(s, false)), enabled: hasSel },
+    { id: 'layer.fromSelectionCut', label: 'Nova camada por recorte da seleção', category: 'Camada', keys: ['Ctrl+Shift+J'], run: () => attempt((s) => layerFromSelection(s, true)), enabled: hasSel },
+
+    // Palette
+    { id: 'palette.import', label: 'Importar paleta…', category: 'Paleta', run: () => void importPaletteFile(), enabled: hasDoc },
+    { id: 'palette.export', label: 'Exportar paleta…', category: 'Paleta', run: () => void exportPaletteFile(), enabled: hasDoc },
+    { id: 'palette.tools', label: 'Ferramentas de paleta…', category: 'Paleta', run: () => ed().openDialog({ type: 'palette-tools' }), enabled: hasDoc },
+
     // View
     { id: 'view.zoomIn', label: 'Aumentar zoom', category: 'Visualizar', keys: ['Plus', 'Ctrl+Plus'], repeat: true, run: () => zoomStep(1), enabled: hasDoc },
     { id: 'view.zoomOut', label: 'Diminuir zoom', category: 'Visualizar', keys: ['Minus', 'Ctrl+Minus'], repeat: true, run: () => zoomStep(-1), enabled: hasDoc },
@@ -64,7 +258,7 @@ export function registerCommands(): void {
     { id: 'view.fitWidth', label: 'Ajustar à largura', category: 'Visualizar', run: () => fitView('width'), enabled: hasDoc },
     { id: 'view.fitHeight', label: 'Ajustar à altura', category: 'Visualizar', run: () => fitView('height'), enabled: hasDoc },
     { id: 'view.actualSize', label: 'Tamanho real (100%)', category: 'Visualizar', keys: ['Ctrl+1'], run: () => zoomTo(1), enabled: hasDoc },
-    { id: 'view.center', label: 'Centralizar documento', category: 'Visualizar', keys: ['Ctrl+Shift+C'], run: () => centerView(), enabled: hasDoc },
+    { id: 'view.center', label: 'Centralizar documento', category: 'Visualizar', keys: ['Ctrl+Shift+0'], run: () => centerView(), enabled: hasDoc },
     {
       id: 'view.pixelGrid',
       label: 'Grade de pixels',
@@ -77,7 +271,7 @@ export function registerCommands(): void {
       id: 'view.tileGrid',
       label: 'Grade de tiles',
       category: 'Visualizar',
-      keys: ['Ctrl+Shift+G'],
+      keys: ["Ctrl+Shift+'"],
       run: () => prefs().set({ tileGrid: !prefs().prefs.tileGrid }),
       checked: () => prefs().prefs.tileGrid,
     },

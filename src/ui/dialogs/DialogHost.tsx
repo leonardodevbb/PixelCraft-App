@@ -4,6 +4,11 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { ExportPngDialog } from './ExportPngDialog';
 import { NewProjectDialog } from './NewProjectDialog';
 import { ShortcutsDialog } from './ShortcutsDialog';
+import { OffsetDialog, ReplaceColorDialog, ResizeCanvasDialog, ResizeContentDialog, ScaleSelectionDialog } from './ImageDialogs';
+import { LayerPropertiesDialog } from './LayerPropertiesDialog';
+import { PaletteToolsDialog } from './PaletteToolsDialog';
+import { PreferencesDialog } from './PreferencesDialog';
+import { PromptDialog } from './PromptDialog';
 
 export function DialogHost() {
   const d = useEditor((s) => s.dialog);
@@ -19,6 +24,24 @@ export function DialogHost() {
       return <ShortcutsDialog />;
     case 'confirm':
       return <ConfirmDialog d={d} />;
+    case 'prompt':
+      return <PromptDialog d={d} />;
+    case 'resize-canvas':
+      return <ResizeCanvasDialog />;
+    case 'resize-content':
+      return <ResizeContentDialog />;
+    case 'offset':
+      return <OffsetDialog />;
+    case 'replace-color':
+      return <ReplaceColorDialog />;
+    case 'scale-selection':
+      return <ScaleSelectionDialog />;
+    case 'layer-properties':
+      return <LayerPropertiesDialog layerId={d.layerId} />;
+    case 'palette-tools':
+      return <PaletteToolsDialog />;
+    case 'preferences':
+      return <PreferencesDialog />;
     default:
       return null;
   }

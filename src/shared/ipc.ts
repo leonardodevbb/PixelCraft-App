@@ -100,6 +100,12 @@ export interface PixelCraftApi {
     load(): Promise<unknown>;
     save(value: unknown): Promise<void>;
   };
+  clipboard: {
+    /** Puts a PNG image on the system clipboard. */
+    writePng(data: Uint8Array): Promise<void>;
+    /** PNG bytes of the image on the system clipboard, or null. */
+    readPng(): Promise<Uint8Array | null>;
+  };
   recovery: {
     write(id: string, meta: { name: string; originalPath: string | null }, data: Uint8Array): Promise<void>;
     list(): Promise<RecoveryEntry[]>;
@@ -134,6 +140,8 @@ export const IPC = {
   settingsSave: 'settings:save',
   palettesLoad: 'palettes:load',
   palettesSave: 'palettes:save',
+  clipboardWritePng: 'clipboard:write-png',
+  clipboardReadPng: 'clipboard:read-png',
   recoveryWrite: 'recovery:write',
   recoveryList: 'recovery:list',
   recoveryRead: 'recovery:read',

@@ -10,7 +10,8 @@ export type CommandCategory =
   | 'Ferramentas'
   | 'Cores'
   | 'Ajuda'
-  | 'Seleção';
+  | 'Seleção'
+  | 'Paleta';
 
 export interface Command {
   id: string;
@@ -18,7 +19,7 @@ export interface Command {
   category: CommandCategory;
   /** Default shortcuts (first one is shown in menus). */
   keys?: string[];
-  run: () => void | Promise<void>;
+  run: () => unknown;
   enabled?: () => boolean;
   checked?: () => boolean;
   /** Fires on key repeat too (zoom, frame stepping). */

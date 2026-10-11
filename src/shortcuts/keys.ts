@@ -60,6 +60,18 @@ export function canonical(s: string): string {
   return c ? formatChord(c) : '';
 }
 
+const PUNCT_CODES: Record<string, string> = {
+  Quote: "'",
+  BracketLeft: '[',
+  BracketRight: ']',
+  Comma: ',',
+  Period: '.',
+  Slash: '/',
+  Semicolon: ';',
+  Backslash: '\\',
+  Backquote: '`',
+};
+
 export function chordFromEvent(e: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'shiftKey' | 'altKey' | 'code'>): KeyChord | null {
   if (['Control', 'Shift', 'Alt', 'Meta', 'AltGraph'].includes(e.key)) return null;
   let key = e.key;
@@ -68,6 +80,8 @@ export function chordFromEvent(e: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaK
   else if (e.code.startsWith('Digit')) key = e.code.slice(5);
   else if (e.code === 'Equal' || e.code === 'NumpadAdd') key = '+';
   else if (e.code === 'Minus' || e.code === 'NumpadSubtract') key = '-';
+  // Shift changes punctuation symbols ("'" → '"'); use the unshifted US symbol for the key position.
+  else if (e.shiftKey && PUNCT_CODES[e.code]) key = PUNCT_CODES[e.code]!;
   return { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey, alt: e.altKey, key: normalizeKey(key) };
 }
 

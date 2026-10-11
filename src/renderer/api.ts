@@ -136,6 +136,25 @@ function browserApi(): PixelCraftApi {
         store.set('palettes', v);
       },
     },
+    clipboard: {
+      writePng: async (data) => {
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': new Blob([data as BlobPart], { type: 'image/png' }) })]);
+        } catch {
+          /* clipboard permission denied: internal clipboard still works */
+        }
+      },
+      readPng: async () => {
+        try {
+          for (const item of await navigator.clipboard.read()) {
+            if (item.types.includes('image/png')) return new Uint8Array(await (await item.getType('image/png')).arrayBuffer());
+          }
+        } catch {
+          /* unavailable */
+        }
+        return null;
+      },
+    },
     recovery: {
       write: async (id, _m, data) => {
         store.set(`rec:${id}`, data);

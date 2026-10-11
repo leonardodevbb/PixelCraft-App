@@ -1,0 +1,331 @@
+/* ---------- shared bits ---------- */
+.dialog-note {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.row.align-start {
+  align-items: flex-start;
+}
+.link-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+.link-btn:hover {
+  text-decoration: underline;
+}
+.buffer-view {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.buffer-view canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------- tabs ---------- */
+.tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+.tabs button {
+  padding: 6px 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+.tabs button:hover {
+  color: var(--text);
+}
+.tabs button.is-active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+.side-tabs {
+  display: flex;
+  flex-direction: column;
+  min-height: 220px;
+  flex: 1 0 auto;
+}
+.side-tabs > .tabs {
+  margin: 0;
+  padding: 0 6px;
+  background: var(--panel-2);
+}
+.side-tabs .panel-section {
+  border-bottom: none;
+}
+
+/* ---------- anchors & tags ---------- */
+.anchor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 22px);
+  gap: 3px;
+}
+.anchor-grid button {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--panel-2);
+  cursor: pointer;
+}
+.anchor-grid button.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.tag-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.tag-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.tag-swatch.none {
+  background: linear-gradient(135deg, transparent 45%, var(--danger) 45%, var(--danger) 55%, transparent 55%), var(--panel-2);
+  border-color: var(--border);
+}
+.tag-swatch.is-active {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px var(--panel);
+}
+
+/* ---------- layers ---------- */
+.layer-props {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.layer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--panel-2);
+}
+.layer-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  padding-right: 4px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+}
+.layer-row:last-child {
+  border-bottom: none;
+}
+.layer-row:hover {
+  background: var(--panel-3);
+}
+.layer-row.is-active {
+  background: color-mix(in srgb, var(--accent) 22%, var(--panel-2));
+}
+.layer-row.is-hidden .layer-name {
+  opacity: 0.5;
+}
+.layer-row.drop-above::before,
+.layer-row.drop-below::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+}
+.layer-row.drop-above::before {
+  top: -1px;
+}
+.layer-row.drop-below::after {
+  bottom: -1px;
+}
+.layer-row.drop-inside {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.layer-toggle {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 22px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+}
+.layer-toggle:hover {
+  color: var(--text);
+}
+.layer-toggle[aria-pressed='true'] {
+  color: var(--text);
+}
+.layer-more {
+  opacity: 0;
+}
+.layer-row:hover .layer-more,
+.layer-row.is-active .layer-more,
+.layer-more:focus-visible {
+  opacity: 1;
+}
+.layer-tag {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin: 0 3px;
+}
+.layer-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-left: 4px;
+}
+.layer-rename {
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  font: inherit;
+}
+.layer-badge {
+  flex: none;
+  font-size: 10px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--panel-3);
+  color: var(--muted);
+}
+
+/* ---------- palette ---------- */
+.palette-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.palette-head .select-field {
+  flex: 1;
+  min-width: 0;
+}
+.palette-head select {
+  width: 100%;
+}
+.palette-swatch.is-focused {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.palette-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 11px;
+}
+.chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin: 4px 0 8px;
+}
+.color-chip {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background-image: linear-gradient(45deg, var(--checker-b) 25%, transparent 25%, transparent 75%, var(--checker-b) 75%),
+    linear-gradient(45deg, var(--checker-b) 25%, transparent 25%, transparent 75%, var(--checker-b) 75%);
+  background-color: var(--checker-a);
+  background-size: 8px 8px;
+  background-position: 0 0, 4px 4px;
+}
+.color-chip span {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.color-field code {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+/* ---------- history ---------- */
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+.history-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 4px 8px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+.history-item:hover {
+  background: var(--panel-3);
+}
+.history-item.is-current {
+  background: color-mix(in srgb, var(--accent) 22%, var(--panel-2));
+  font-weight: 600;
+}
+.history-item.is-undone {
+  color: var(--muted);
+  font-style: italic;
+}
+.history-usage {
+  margin: 6px 0 0;
+  font-size: 11px;
+}
+.side-tabs .panel-header h2 {
+  display: none;
+}
+.side-tabs .panel-header {
+  justify-content: flex-end;
+}
+.panel-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
