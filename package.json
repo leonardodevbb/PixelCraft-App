@@ -1,0 +1,39 @@
+{
+  "name": "pixelcraft",
+  "productName": "PixelCraft",
+  "version": "0.1.0",
+  "description": "Editor de pixel art e animação quadro a quadro para Linux",
+  "private": true,
+  "license": "MIT",
+  "author": {
+    "name": "PixelCraft contributors",
+    "email": "pixelcraft@users.noreply.github.com"
+  },
+  "homepage": "https://github.com/pixelcraft/pixelcraft",
+  "main": "dist-electron/main.js",
+  "type": "module",
+  "scripts": {},
+  "dependencies": {
+    "fflate": "^0.8.3",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.5",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^41.10.7",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.1",
+    "vite": "^7.3.7",
+    "vitest": "^3.2.7"
+  }
+}
