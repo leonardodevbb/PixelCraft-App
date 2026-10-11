@@ -23,8 +23,9 @@ export function PreviewPanel() {
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
       const draft = session.draft;
-      const buf = composeFrame(session.state, session.lookup, session.activeFrameId, {
-        overrides: draft && draft.frameId === session.activeFrameId ? new Map([[draft.key, draft.buffer]]) : undefined,
+      const frameId = useEditor.getState().playFrameId ?? session.activeFrameId;
+      const buf = composeFrame(session.state, session.lookup, frameId, {
+        overrides: draft && draft.frameId === frameId ? new Map([[draft.key, draft.buffer]]) : undefined,
       });
       canvas.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(buf.data), width, height), 0, 0);
     };
@@ -33,8 +34,10 @@ export function PreviewPanel() {
     };
     schedule();
     const unsub = session.subscribe(schedule);
+    const unsubPlay = useEditor.subscribe((st, prev) => st.playFrameId !== prev.playFrameId && schedule());
     return () => {
       unsub();
+      unsubPlay();
       if (raf) cancelAnimationFrame(raf);
     };
   }, [session]);

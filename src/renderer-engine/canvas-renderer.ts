@@ -1,5 +1,6 @@
 import type { EditorSession } from '../editor/session';
 import { composeFrame } from '../layers/compose';
+import { frameSignature } from '../editor/signature';
 import { PixelBuffer } from '../raster/pixel-buffer';
 import { type Rect, intersectRect, rectIsEmpty, unionRect } from '../raster/rect';
 import type { Point } from '../raster/rect';
@@ -176,7 +177,9 @@ export class CanvasRenderer {
     if (!s || !o.enabled || !frameId || this.frameOverride) return null;
     const frames = s.state.frames;
     const idx = frames.findIndex((f) => f.id === frameId);
-    const key = `${s.revision}|${frameId}|${o.before}|${o.after}|${o.opacity}|${o.beforeColor}|${o.afterColor}`;
+    const near: string[] = [];
+    for (let i = idx - o.before; i <= idx + o.after; i++) if (i !== idx && frames[i]) near.push(frameSignature(s, frames[i]!.id));
+    const key = `${near.join(';')}|${idx}|${o.before}|${o.after}|${o.opacity}|${o.beforeColor}|${o.afterColor}`;
     if (this.onionCanvas && this.onionKey === key) return this.onionCanvas;
     const { width, height } = s.state;
     const c = this.onionCanvas ?? document.createElement('canvas');

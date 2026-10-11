@@ -78,6 +78,8 @@ interface EditorStore {
   hover: HoverInfo | null;
   symmetryOn: boolean;
   playing: boolean;
+  /** Frame shown while the animation plays (the edited frame stays active). */
+  playFrameId: string | null;
   dialog: DialogState | null;
   toasts: Toast[];
   busy: string | null;
@@ -116,6 +118,7 @@ export const useEditor = create<EditorStore>((set, get) => ({
   hover: null,
   symmetryOn: true,
   playing: false,
+  playFrameId: null,
   dialog: null,
   toasts: [],
   busy: null,
@@ -127,7 +130,7 @@ export const useEditor = create<EditorStore>((set, get) => ({
           if (e.type !== 'draft') set((st) => ({ revision: st.revision + 1 }));
         })
       : null;
-    set((st) => ({ session: s, revision: st.revision + 1, hover: null, playing: false }));
+    set((st) => ({ session: s, revision: st.revision + 1, hover: null, playing: false, playFrameId: null }));
   },
   bump: () => set((st) => ({ revision: st.revision + 1 })),
   setTool(t) {

@@ -5,7 +5,7 @@ export function buildMenus(): MenuDef[] {
   return [
     {
       label: 'Arquivo',
-      items: ['file.new', 'file.open', '-', 'file.save', 'file.saveAs', '-', 'file.exportPng', '-', 'file.newWindow', 'file.close'],
+      items: ['file.new', 'file.open', '-', 'file.save', 'file.saveAs', '-', 'file.exportPng', 'file.exportGif', 'file.exportSheet', 'file.exportSequence', '-', 'file.newWindow', 'file.close'],
     },
     {
       label: 'Editar',
@@ -86,6 +86,35 @@ export function buildMenus(): MenuDef[] {
       ],
     },
     {
+      label: 'Animação',
+      items: [
+        'anim.play',
+        '-',
+        'anim.first',
+        'anim.prev',
+        'anim.next',
+        'anim.last',
+        '-',
+        'anim.newFrame',
+        'anim.duplicateFrame',
+        'anim.duplicateLinked',
+        'anim.deleteFrame',
+        'anim.moveLeft',
+        'anim.moveRight',
+        'anim.reverse',
+        '-',
+        'anim.duration',
+        'anim.durationAll',
+        'anim.tag',
+        'anim.clearTag',
+        '-',
+        'anim.linkPrev',
+        'anim.unlink',
+        '-',
+        'anim.onion',
+      ],
+    },
+    {
       label: 'Visualizar',
       items: [
         'view.zoomIn',
@@ -100,6 +129,7 @@ export function buildMenus(): MenuDef[] {
         'view.tileGrid',
         '-',
         'view.rightPanel',
+        'view.timeline',
         'view.fullscreen',
         { label: 'Tema', items: ['view.theme.dark', 'view.theme.light', 'view.theme.system'] },
       ],

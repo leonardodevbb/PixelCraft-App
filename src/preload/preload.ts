@@ -27,6 +27,7 @@ const api: PixelCraftApi = {
     read: (path) => invoke(IPC.read, path),
     saveDialog: (opts) => invoke(IPC.saveDialog, opts),
     write: (path, data) => invoke(IPC.write, path, data),
+    writeSibling: (path, ext, data) => invoke(IPC.writeSibling, path, ext, data),
     chooseDirectory: (title) => invoke(IPC.chooseDirectory, title),
     writeInDirectory: (dir, name, data) => invoke(IPC.writeInDirectory, dir, name, data),
     showInFolder: (path) => invoke(IPC.showInFolder, path),

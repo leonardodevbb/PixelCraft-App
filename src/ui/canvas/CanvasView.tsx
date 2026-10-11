@@ -8,6 +8,11 @@ import { nextZoom, screenToDoc, zoomAround } from '../../renderer-engine/viewpor
 import { useEditor } from '../../renderer/state/editor-store';
 import { usePrefs, type Preferences } from '../../renderer/state/preferences';
 import { fitView, viewportSize } from '../../renderer/actions/view';
+import { stopPlayback, togglePlayback } from '../../renderer/actions/playback';
+
+function isTyping(t: EventTarget | null): boolean {
+  return t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement || (t instanceof HTMLElement && t.isContentEditable);
+}
 
 const PAINT_TOOLS: ToolId[] = ['pencil', 'brush', 'eraser', 'line', 'rect', 'rect-filled', 'ellipse', 'ellipse-filled'];
 const SIZED_TOOLS: ToolId[] = ['pencil', 'brush', 'eraser', 'line', 'rect', 'ellipse'];
@@ -79,6 +84,10 @@ export function CanvasView() {
         r.request();
       }
       if (s.revision !== prev.revision) r.request();
+      if (s.playFrameId !== prev.playFrameId) {
+        r.frameOverride = s.playFrameId;
+        r.invalidate();
+      }
     });
     const unsubPrefs = usePrefs.subscribe((s) => {
       // Wait a frame so theme variables (read from CSS) are already applied.
@@ -128,6 +137,9 @@ export function CanvasView() {
     const canvas = canvasRef.current!;
     let active: Interaction | null = null;
     let spaceDown = false;
+    /** A quick Space tap (without panning) toggles playback; holding it pans. */
+    let spaceAt = 0;
+    let spaceUsed = false;
     let altDown = false;
     let lastHover: { x: number; y: number } | null = null;
 
@@ -176,6 +188,8 @@ export function CanvasView() {
       const st = useEditor.getState();
       if (!st.session || active) return;
       canvas.focus();
+      if (st.playing) stopPlayback();
+      spaceUsed = true;
       const isPan = e.button === 1 || spaceDown || (e.button === 0 && effectiveTool() === 'pan');
       if (e.button !== 0 && e.button !== 2 && !isPan) return;
       e.preventDefault();
@@ -257,8 +271,11 @@ export function CanvasView() {
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === ' ' && !spaceDown && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
+      if (e.key === ' ' && !spaceDown && !isTyping(e.target)) {
         spaceDown = true;
+        spaceAt = performance.now();
+        spaceUsed = false;
+        e.preventDefault();
         updateCursor();
       }
       if (e.key === 'Alt') {
@@ -272,9 +289,11 @@ export function CanvasView() {
       }
     };
     const onKeyUp = (e: KeyboardEvent) => {
-      if (e.key === ' ') {
+      if (e.key === ' ' && spaceDown) {
         spaceDown = false;
         updateCursor();
+        const st = useEditor.getState();
+        if (!spaceUsed && performance.now() - spaceAt < 300 && st.session && !st.dialog && !isTyping(e.target)) togglePlayback();
       }
       if (e.key === 'Alt') {
         altDown = false;

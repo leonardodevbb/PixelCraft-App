@@ -93,6 +93,11 @@ function browserApi(): PixelCraftApi {
         download(path, data);
         return { path, bytes: data.length };
       },
+      writeSibling: async (path, ext, data) => {
+        const name = `${path.replace(/\.[^./]+$/, '')}.${ext}`;
+        download(name, data);
+        return { path: name, bytes: data.length };
+      },
       chooseDirectory: async () => 'downloads',
       writeInDirectory: async (dir, name, data) => {
         download(name, data);

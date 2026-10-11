@@ -54,6 +54,8 @@ export class EditorSession {
   private listeners = new Set<SessionListener>();
   private savedMarker: HistoryEntry<EditorContext> | null | undefined = null;
   private _draft: Draft | null = null;
+  /** Bumped whenever an image's pixels change in place (patches), for caches. */
+  private versions = new Map<ImageId, number>();
   /** Incremented on every visible change; cheap to compare from UI code. */
   revision = 0;
   filePath: string | null = null;
@@ -114,6 +116,14 @@ export class EditorSession {
     this.emit({ type: 'context' });
   }
 
+  imageVersion(id: ImageId): number {
+    return this.versions.get(id) ?? 0;
+  }
+
+  private bump(patches: readonly PixelPatch[]): void {
+    for (const p of patches) this.versions.set(p.imageId, (this.versions.get(p.imageId) ?? 0) + 1);
+  }
+
   image(id: ImageId): PixelBuffer | undefined {
     return this.doc.images.get(id);
   }
@@ -166,6 +176,7 @@ export class EditorSession {
     let bytes = patchBytes(patches) + 256;
     for (const id of newImages) bytes += this.doc.images.get(id)?.data.length ?? 0;
     this.history.push({ label, before, after: next, patches, newImages, ctxBefore, ctxAfter: after, bytes, time: Date.now() });
+    this.bump(patches);
     this.doc.state = next;
     this.ctx = this.fixContext(next, after);
     this.collectGarbage();
@@ -202,6 +213,7 @@ export class EditorSession {
       const p = e.patches[i]!;
       this.doc.images.get(p.imageId)?.paste(p.before, p.rect.x, p.rect.y);
     }
+    this.bump(e.patches);
     this.doc.state = e.before;
     this.ctx = this.fixContext(e.before, e.ctxBefore ?? this.ctx);
     this.emit({ type: 'doc' });
@@ -214,6 +226,7 @@ export class EditorSession {
     if (!e) return false;
     this.doc.state = e.after;
     for (const p of e.patches) this.doc.images.get(p.imageId)?.paste(p.after, p.rect.x, p.rect.y);
+    this.bump(e.patches);
     this.ctx = this.fixContext(e.after, e.ctxAfter ?? this.ctx);
     this.emit({ type: 'doc' });
     return true;

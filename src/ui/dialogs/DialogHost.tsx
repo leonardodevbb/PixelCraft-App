@@ -9,6 +9,7 @@ import { LayerPropertiesDialog } from './LayerPropertiesDialog';
 import { PaletteToolsDialog } from './PaletteToolsDialog';
 import { PreferencesDialog } from './PreferencesDialog';
 import { PromptDialog } from './PromptDialog';
+import { AnimationExportDialog } from './AnimationExportDialog';
 
 export function DialogHost() {
   const d = useEditor((s) => s.dialog);
@@ -40,6 +41,12 @@ export function DialogHost() {
       return <LayerPropertiesDialog layerId={d.layerId} />;
     case 'palette-tools':
       return <PaletteToolsDialog />;
+    case 'export-gif':
+      return <AnimationExportDialog kind="gif" />;
+    case 'export-sequence':
+      return <AnimationExportDialog kind="sequence" />;
+    case 'export-spritesheet':
+      return <AnimationExportDialog kind="spritesheet" />;
     case 'preferences':
       return <PreferencesDialog />;
     default:

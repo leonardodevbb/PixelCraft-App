@@ -6,6 +6,7 @@ import { HistoryPanel } from '../ui/panels/HistoryPanel';
 import { LayersPanel } from '../ui/panels/LayersPanel';
 import { PalettePanel } from '../ui/panels/PalettePanel';
 import { PreviewPanel } from '../ui/panels/PreviewPanel';
+import { Timeline } from '../ui/timeline/Timeline';
 import { StartScreen } from '../ui/StartScreen';
 import { StatusBar } from '../ui/layout/StatusBar';
 import { ToolBar } from '../ui/layout/ToolBar';
@@ -51,6 +52,7 @@ export function App() {
   const session = useEditor((s) => s.session);
   const dialog = useEditor((s) => s.dialog);
   const right = usePrefs((s) => s.prefs.panels.right);
+  const timeline = usePrefs((s) => s.prefs.panels.timeline);
   const rightWidth = usePrefs((s) => s.prefs.panels.rightWidth);
   const shortcutOverrides = usePrefs((s) => s.prefs.shortcuts);
   const autosaveSeconds = usePrefs((s) => s.prefs.autosaveSeconds);
@@ -84,6 +86,8 @@ export function App() {
       if (useEditor.getState().dialog) return;
       if (isTextInput(e.target)) return;
       if ((e.target as HTMLElement | null)?.closest?.('[role="menu"]')) return;
+      // Enter activates focused controls; it only plays the animation from the canvas/background.
+      if (e.key === 'Enter' && (e.target as HTMLElement | null)?.closest?.('button, a, [role="option"], [role="tab"]')) return;
       commands.handleKey(e);
     };
     window.addEventListener('keydown', onKey);
@@ -106,6 +110,7 @@ export function App() {
           <div className="center">
             <ToolOptionsBar />
             <CanvasView />
+            {timeline && <Timeline />}
           </div>
           {right && (
             <aside className="side-panel" style={{ width: rightWidth }} aria-label="Painéis">
@@ -169,6 +174,9 @@ function SideTabs() {
       palette: s.state.palette.colors.length,
       history: s.history.entries.map((e) => e.label),
       tool: useEditor.getState().tool,
+      activeFrame: s.state.frames.findIndex((f) => f.id === s.activeFrameId),
+      durations: s.state.frames.map((f) => f.duration),
+      playing: useEditor.getState().playing,
     };
   },
   /** Pixel of the visible composite of the active frame. */

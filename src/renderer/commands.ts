@@ -6,10 +6,24 @@ import { usePrefs } from './state/preferences';
 import { closeProject, openProjectDialog, save, saveAs } from './actions/documents';
 import { centerView, fitView, zoomStep, zoomTo } from './actions/view';
 import { attempt, copy, cut, deleteSelection, nudge, paste, selectAll } from './actions/edit';
-import { confirmDialog } from './state/editor-store';
+import { confirmDialog, promptDialog } from './state/editor-store';
+import { stopPlayback, togglePlayback } from './actions/playback';
+import {
+  addFrame,
+  deleteFrame,
+  duplicateFrame,
+  goToFrame,
+  isCelLinked,
+  linkCelToPrevious,
+  moveFrame,
+  reverseFrames,
+  setFrameDuration,
+  setFrameTag,
+  unlinkCel,
+} from '../editor/frame-ops';
 import { invertSelection, opaqueSelection } from '../editor/selection';
 import { flipSelectedH, flipSelectedV, rotateSelected } from '../editor/selection-ops';
-import { EditorError } from '../editor/session';
+import { EditorError, type EditorSession } from '../editor/session';
 import {
   centerContent,
   clearCels,
@@ -50,6 +64,18 @@ const activeLayer = () => {
 };
 const activeIsGroup = (): boolean => activeLayer()?.type === 'group';
 
+function frameIdx(s: EditorSession): number {
+  return s.state.frames.findIndex((f) => f.id === s.activeFrameId);
+}
+
+/** Frame navigation pauses playback first so the user sees the frame they asked for. */
+function frameNav(fn: (s: EditorSession) => void): void {
+  const s = ed().session;
+  if (!s) return;
+  if (ed().playing) stopPlayback();
+  fn(s);
+}
+
 /** Moves the active-layer focus through the panel order (top-most first). */
 function selectAdjacentLayer(dir: 1 | -1): void {
   const s = ed().session;
@@ -87,6 +113,9 @@ export function registerCommands(): void {
     { id: 'file.save', label: 'Salvar', category: 'Arquivo', keys: ['Ctrl+S'], run: () => void save(), enabled: hasDoc },
     { id: 'file.saveAs', label: 'Salvar como…', category: 'Arquivo', keys: ['Ctrl+Shift+S'], run: () => void saveAs(), enabled: hasDoc },
     { id: 'file.exportPng', label: 'Exportar PNG…', category: 'Arquivo', keys: ['Ctrl+Shift+E'], run: () => ed().openDialog({ type: 'export-png' }), enabled: hasDoc },
+    { id: 'file.exportGif', label: 'Exportar GIF animado…', category: 'Arquivo', keys: ['Ctrl+Alt+G'], run: () => ed().openDialog({ type: 'export-gif' }), enabled: hasDoc },
+    { id: 'file.exportSheet', label: 'Exportar spritesheet…', category: 'Arquivo', keys: ['Ctrl+Alt+S'], run: () => ed().openDialog({ type: 'export-spritesheet' }), enabled: hasDoc },
+    { id: 'file.exportSequence', label: 'Exportar sequência de PNG…', category: 'Arquivo', run: () => ed().openDialog({ type: 'export-sequence' }), enabled: hasDoc },
     { id: 'file.close', label: 'Fechar projeto', category: 'Arquivo', keys: ['Ctrl+W'], run: () => closeProject(), enabled: hasDoc },
     { id: 'file.newWindow', label: 'Nova janela', category: 'Arquivo', run: () => api.app.newWindow() },
 
@@ -245,6 +274,78 @@ export function registerCommands(): void {
     },
     { id: 'layer.fromSelectionCopy', label: 'Nova camada por cópia da seleção', category: 'Camada', keys: ['Ctrl+Alt+J'], run: () => attempt((s) => layerFromSelection(s, false)), enabled: hasSel },
     { id: 'layer.fromSelectionCut', label: 'Nova camada por recorte da seleção', category: 'Camada', keys: ['Ctrl+Shift+J'], run: () => attempt((s) => layerFromSelection(s, true)), enabled: hasSel },
+
+    // Animation
+    { id: 'anim.play', label: 'Reproduzir / pausar', category: 'Animação', keys: ['Enter'], run: () => togglePlayback(), enabled: () => (ed().session?.state.frames.length ?? 0) > 1, checked: () => ed().playing },
+    { id: 'anim.prev', label: 'Quadro anterior', category: 'Animação', keys: [','], repeat: true, run: () => frameNav((s) => goToFrame(s, -1)), enabled: hasDoc },
+    { id: 'anim.next', label: 'Próximo quadro', category: 'Animação', keys: ['.'], repeat: true, run: () => frameNav((s) => goToFrame(s, 1)), enabled: hasDoc },
+    { id: 'anim.first', label: 'Primeiro quadro', category: 'Animação', keys: ['Home'], run: () => frameNav((s) => s.setActiveFrame(s.state.frames[0]!.id)), enabled: hasDoc },
+    { id: 'anim.last', label: 'Último quadro', category: 'Animação', keys: ['End'], run: () => frameNav((s) => s.setActiveFrame(s.state.frames.at(-1)!.id)), enabled: hasDoc },
+    { id: 'anim.newFrame', label: 'Novo quadro', category: 'Animação', keys: ['Alt+N'], run: () => attempt((s) => addFrame(s)), enabled: hasDoc },
+    { id: 'anim.duplicateFrame', label: 'Duplicar quadro', category: 'Animação', keys: ['Alt+D'], run: () => attempt((s) => duplicateFrame(s)), enabled: hasDoc },
+    { id: 'anim.duplicateLinked', label: 'Duplicar quadro com células vinculadas', category: 'Animação', keys: ['Alt+Shift+D'], run: () => attempt((s) => duplicateFrame(s, true)), enabled: hasDoc },
+    { id: 'anim.deleteFrame', label: 'Excluir quadro', category: 'Animação', keys: ['Alt+Delete'], run: () => attempt((s) => deleteFrame(s)), enabled: () => (ed().session?.state.frames.length ?? 0) > 1 },
+    { id: 'anim.moveLeft', label: 'Mover quadro para a esquerda', category: 'Animação', keys: ['Alt+Left'], run: () => attempt((s) => moveFrame(s, s.activeFrameId, frameIdx(s) - 1)), enabled: hasDoc },
+    { id: 'anim.moveRight', label: 'Mover quadro para a direita', category: 'Animação', keys: ['Alt+Right'], run: () => attempt((s) => moveFrame(s, s.activeFrameId, frameIdx(s) + 1)), enabled: hasDoc },
+    { id: 'anim.reverse', label: 'Inverter ordem dos quadros', category: 'Animação', run: () => attempt((s) => reverseFrames(s)), enabled: hasDoc },
+    {
+      id: 'anim.duration',
+      label: 'Duração do quadro…',
+      category: 'Animação',
+      run: async () => {
+        const s = ed().session;
+        if (!s) return;
+        const f = s.state.frames.find((x) => x.id === s.activeFrameId)!;
+        const v = await promptDialog({ title: 'Duração do quadro', label: 'Milissegundos', initial: String(f.duration), confirmLabel: 'Aplicar' });
+        if (v !== null && Number.isFinite(Number(v))) attempt((x) => setFrameDuration(x, [x.activeFrameId], Number(v)));
+      },
+      enabled: hasDoc,
+    },
+    {
+      id: 'anim.durationAll',
+      label: 'Aplicar duração a todos os quadros…',
+      category: 'Animação',
+      run: async () => {
+        const s = ed().session;
+        if (!s) return;
+        const f = s.state.frames.find((x) => x.id === s.activeFrameId)!;
+        const v = await promptDialog({ title: 'Duração de todos os quadros', label: 'Milissegundos', initial: String(f.duration), confirmLabel: 'Aplicar a todos' });
+        if (v !== null && Number.isFinite(Number(v))) attempt((x) => setFrameDuration(x, x.state.frames.map((fr) => fr.id), Number(v)));
+      },
+      enabled: hasDoc,
+    },
+    {
+      id: 'anim.tag',
+      label: 'Marcador do quadro…',
+      category: 'Animação',
+      run: async () => {
+        const s = ed().session;
+        if (!s) return;
+        const f = s.state.frames.find((x) => x.id === s.activeFrameId)!;
+        const v = await promptDialog({ title: 'Marcador do quadro', label: 'Nome (ex.: andar, pular). O marcador vale até o próximo.', initial: f.tag ?? '', confirmLabel: 'Aplicar' });
+        if (v !== null) attempt((x) => setFrameTag(x, f.id, v));
+      },
+      enabled: hasDoc,
+    },
+    { id: 'anim.clearTag', label: 'Remover marcador do quadro', category: 'Animação', run: () => attempt((s) => setFrameTag(s, s.activeFrameId, null)), enabled: () => !!ed().session?.state.frames.find((f) => f.id === ed().session?.activeFrameId)?.tag },
+    { id: 'anim.linkPrev', label: 'Vincular célula ao quadro anterior', category: 'Animação', run: () => attempt((s) => linkCelToPrevious(s)), enabled: hasDoc },
+    { id: 'anim.unlink', label: 'Desvincular célula', category: 'Animação', run: () => attempt((s) => unlinkCel(s)), enabled: () => !!ed().session && isCelLinked(ed().session!, ed().session!.activeLayerId, ed().session!.activeFrameId) },
+    {
+      id: 'anim.onion',
+      label: 'Onion skin',
+      category: 'Animação',
+      keys: ['F3'],
+      run: () => prefs().set({ onion: { ...prefs().prefs.onion, enabled: !prefs().prefs.onion.enabled } }),
+      checked: () => prefs().prefs.onion.enabled,
+    },
+    {
+      id: 'view.timeline',
+      label: 'Linha do tempo',
+      category: 'Visualizar',
+      keys: ['Shift+Tab'],
+      run: () => prefs().set({ panels: { ...prefs().prefs.panels, timeline: !prefs().prefs.panels.timeline } }),
+      checked: () => prefs().prefs.panels.timeline,
+    },
 
     // Palette
     { id: 'palette.import', label: 'Importar paleta…', category: 'Paleta', run: () => void importPaletteFile(), enabled: hasDoc },

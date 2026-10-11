@@ -81,6 +81,11 @@ export interface PixelCraftApi {
     saveDialog(opts: SaveDialogOptions): Promise<string | null>;
     /** Atomically writes a granted path. */
     write(path: string, data: Uint8Array): Promise<WriteResult>;
+    /**
+     * Writes a companion file next to a granted file, same base name with
+     * another extension (e.g. sprites.png → sprites.json). Only 'json'.
+     */
+    writeSibling(path: string, extension: 'json', data: Uint8Array): Promise<WriteResult>;
     chooseDirectory(title?: string): Promise<string | null>;
     /** Writes a file named `name` (no directories) inside a granted directory. */
     writeInDirectory(dir: string, name: string, data: Uint8Array): Promise<WriteResult>;
@@ -129,6 +134,7 @@ export const IPC = {
   read: 'file:read',
   saveDialog: 'file:save-dialog',
   write: 'file:write',
+  writeSibling: 'file:write-sibling',
   chooseDirectory: 'file:choose-directory',
   writeInDirectory: 'file:write-in-directory',
   showInFolder: 'file:show-in-folder',

@@ -1,6 +1,6 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeImage, shell, type IpcMainInvokeEvent } from 'electron';
 import { promises as fs } from 'node:fs';
-import { basename, extname, join } from 'node:path';
+import { basename, dirname, extname, join } from 'node:path';
 import { z } from 'zod';
 import { FILE_FILTERS, IPC, MAX_READ_BYTES, type FileKind, type OpenedFile, type WriteResult } from '../shared/ipc';
 import { describeFsError, readJson, writeFileAtomic, writeJson } from '../platform/fs-atomic';
@@ -153,6 +153,20 @@ export function registerIpc(deps: HandlerDeps): void {
       throw new Error(describeFsError(err, p));
     }
     return { path: p, bytes: bytes.length };
+  });
+
+  handle(IPC.writeSibling, async (_e, path: unknown, ext: unknown, data: unknown): Promise<WriteResult> => {
+    const p = pathArg.parse(path);
+    const x = z.enum(['json']).parse(ext);
+    const bytes = bytesArg.parse(data);
+    if (!grants.hasFile(p)) throw new Error('Acesso negado: escolha o local do arquivo pelo diálogo de salvamento.');
+    const sib = join(dirname(p), `${basename(p, extname(p))}.${x}`);
+    try {
+      await writeFileAtomic(sib, bytes);
+    } catch (err) {
+      throw new Error(describeFsError(err, sib));
+    }
+    return { path: sib, bytes: bytes.length };
   });
 
   handle(IPC.chooseDirectory, async (e, title: unknown) => {
