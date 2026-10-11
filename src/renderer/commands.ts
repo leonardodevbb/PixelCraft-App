@@ -7,20 +7,24 @@ import { closeProject, openProjectDialog, save, saveAs } from './actions/documen
 import { moveSelected } from '../editor/selection-ops';
 import { centerView, fitView, zoomStep, zoomTo } from './actions/view';
 import { attempt, copy, cut, deleteSelection, nudge, paste, selectAll } from './actions/edit';
-import { confirmDialog, promptDialog } from './state/editor-store';
+import { confirmDialog, promptDialog, selectedFrameIds } from './state/editor-store';
+import { tagsAt } from '../animation/tags';
 import { stopPlayback, togglePlayback } from './actions/playback';
 import {
   addFrame,
-  deleteFrame,
   duplicateFrame,
   goToFrame,
   isCelLinked,
   linkCelToPrevious,
   moveFrame,
-  reverseFrames,
   setAnimation,
   setFrameDuration,
-  setFrameTag,
+  copyFrames,
+  deleteFrames,
+  duplicateFrames,
+  pasteFrames,
+  reverseFrameRange,
+  type FrameClip,
   unlinkCel,
 } from '../editor/frame-ops';
 import { borderSelection, clipSelection, colorSelection, contractSelection, expandSelection, invertSelection, opaqueSelection } from '../editor/selection';
@@ -57,6 +61,9 @@ import { exportPaletteFile, importPaletteFile } from '../ui/panels/PalettePanel'
 import { importImageAsLayer, importSpritesheet } from './actions/import';
 
 export const commands = new CommandRegistry();
+
+/** Frames copied with "Copiar quadros" (kept across documents of this window). */
+let frameClipboard: FrameClip | null = null;
 
 const ed = () => useEditor.getState();
 const hasDoc = (): boolean => !!ed().session;
@@ -391,12 +398,35 @@ export function registerCommands(): void {
     { id: 'anim.first', label: 'Primeiro quadro', category: 'Animação', keys: ['Home'], run: () => frameNav((s) => s.setActiveFrame(s.state.frames[0]!.id)), enabled: hasDoc },
     { id: 'anim.last', label: 'Último quadro', category: 'Animação', keys: ['End'], run: () => frameNav((s) => s.setActiveFrame(s.state.frames.at(-1)!.id)), enabled: hasDoc },
     { id: 'anim.newFrame', label: 'Novo quadro', category: 'Animação', keys: ['Alt+N'], run: () => attempt((s) => addFrame(s)), enabled: hasDoc },
-    { id: 'anim.duplicateFrame', label: 'Duplicar quadro', category: 'Animação', keys: ['Alt+D'], run: () => attempt((s) => duplicateFrame(s)), enabled: hasDoc },
+    {
+      id: 'anim.duplicateFrame',
+      label: 'Duplicar quadro',
+      category: 'Animação',
+      keys: ['Alt+D'],
+      run: () =>
+        attempt((s) => {
+          const ids = selectedFrameIds();
+          if (ids.length > 1) useEditor.setState({ frameSelection: duplicateFrames(s, ids) });
+          else duplicateFrame(s);
+        }),
+      enabled: hasDoc,
+    },
     { id: 'anim.duplicateLinked', label: 'Duplicar quadro com células vinculadas', category: 'Animação', keys: ['Alt+Shift+D'], run: () => attempt((s) => duplicateFrame(s, true)), enabled: hasDoc },
-    { id: 'anim.deleteFrame', label: 'Excluir quadro', category: 'Animação', keys: ['Alt+Delete'], run: () => attempt((s) => deleteFrame(s)), enabled: () => (ed().session?.state.frames.length ?? 0) > 1 },
+    {
+      id: 'anim.deleteFrame',
+      label: 'Excluir quadro',
+      category: 'Animação',
+      keys: ['Alt+Delete'],
+      run: () =>
+        attempt((s) => {
+          deleteFrames(s, selectedFrameIds());
+          useEditor.setState({ frameSelection: [] });
+        }),
+      enabled: () => (ed().session?.state.frames.length ?? 0) > 1,
+    },
     { id: 'anim.moveLeft', label: 'Mover quadro para a esquerda', category: 'Animação', keys: ['Alt+Left'], run: () => attempt((s) => moveFrame(s, s.activeFrameId, frameIdx(s) - 1)), enabled: hasDoc },
     { id: 'anim.moveRight', label: 'Mover quadro para a direita', category: 'Animação', keys: ['Alt+Right'], run: () => attempt((s) => moveFrame(s, s.activeFrameId, frameIdx(s) + 1)), enabled: hasDoc },
-    { id: 'anim.reverse', label: 'Inverter ordem dos quadros', category: 'Animação', run: () => attempt((s) => reverseFrames(s)), enabled: hasDoc },
+    { id: 'anim.reverse', label: 'Inverter ordem dos quadros', category: 'Animação', run: () => attempt((s) => reverseFrameRange(s, selectedFrameIds())), enabled: hasDoc },
     {
       id: 'anim.duration',
       label: 'Duração do quadro…',
@@ -424,19 +454,66 @@ export function registerCommands(): void {
       enabled: hasDoc,
     },
     {
-      id: 'anim.tag',
-      label: 'Marcador do quadro…',
+      id: 'anim.newTag',
+      label: 'Nova tag com os quadros selecionados…',
       category: 'Animação',
-      run: async () => {
+      keys: ['Alt+T'],
+      run: () => {
         const s = ed().session;
         if (!s) return;
-        const f = s.state.frames.find((x) => x.id === s.activeFrameId)!;
-        const v = await promptDialog({ title: 'Marcador do quadro', label: 'Nome (ex.: andar, pular). O marcador vale até o próximo.', initial: f.tag ?? '', confirmLabel: 'Aplicar' });
-        if (v !== null) attempt((x) => setFrameTag(x, f.id, v));
+        const idx = selectedFrameIds().map((id) => s.state.frames.findIndex((f) => f.id === id));
+        ed().openDialog({ type: 'tag', from: Math.min(...idx), to: Math.max(...idx) });
       },
       enabled: hasDoc,
     },
-    { id: 'anim.clearTag', label: 'Remover marcador do quadro', category: 'Animação', run: () => attempt((s) => setFrameTag(s, s.activeFrameId, null)), enabled: () => !!ed().session?.state.frames.find((f) => f.id === ed().session?.activeFrameId)?.tag },
+    {
+      id: 'anim.editTag',
+      label: 'Editar tag do quadro…',
+      category: 'Animação',
+      run: () => {
+        const s = ed().session;
+        const t = s && tagsAt(s.state, s.activeFrameId)[0];
+        if (t) ed().openDialog({ type: 'tag', tagId: t.id });
+      },
+      enabled: () => !!ed().session && tagsAt(ed().session!.state, ed().session!.activeFrameId).length > 0,
+    },
+    {
+      id: 'anim.playTagOnly',
+      label: 'Tocar só a tag do quadro atual',
+      category: 'Animação',
+      run: () => {
+        const was = ed().playing;
+        if (was) stopPlayback();
+        useEditor.setState({ playTagOnly: !ed().playTagOnly });
+        if (was) togglePlayback();
+      },
+      checked: () => ed().playTagOnly,
+    },
+    {
+      id: 'anim.copyFrames',
+      label: 'Copiar quadros',
+      category: 'Animação',
+      keys: ['Alt+C'],
+      run: () =>
+        attempt((s) => {
+          frameClipboard = copyFrames(s, selectedFrameIds());
+          ed().toast('info', frameClipboard.frames.length > 1 ? `${frameClipboard.frames.length} quadros copiados.` : 'Quadro copiado.');
+        }),
+      enabled: hasDoc,
+    },
+    {
+      id: 'anim.pasteFrames',
+      label: 'Colar quadros depois do atual',
+      category: 'Animação',
+      keys: ['Alt+V'],
+      run: () =>
+        attempt((s) => {
+          if (!frameClipboard) return;
+          const ids = pasteFrames(s, frameClipboard);
+          useEditor.setState({ frameSelection: ids.length > 1 ? ids : [] });
+        }),
+      enabled: () => hasDoc() && !!frameClipboard,
+    },
     { id: 'anim.linkPrev', label: 'Vincular célula ao quadro anterior', category: 'Animação', run: () => attempt((s) => linkCelToPrevious(s)), enabled: hasDoc },
     { id: 'anim.unlink', label: 'Desvincular célula', category: 'Animação', run: () => attempt((s) => unlinkCel(s)), enabled: () => !!ed().session && isCelLinked(ed().session!, ed().session!.activeLayerId, ed().session!.activeFrameId) },
     {

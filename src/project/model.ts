@@ -38,8 +38,25 @@ export interface Frame {
   id: FrameId;
   /** Display time in milliseconds. */
   duration: number;
-  /** Optional marker label shown on the timeline (e.g. start of a tag). */
-  tag?: string;
+}
+
+export type TagDirection = 'forward' | 'reverse' | 'pingpong';
+
+/**
+ * A named range of frames (an animation such as "walk" or "jump"). The
+ * endpoints are frame ids, so the tag follows its frames when they move and
+ * frames inserted inside the range join it.
+ */
+export interface Tag {
+  id: string;
+  name: string;
+  from: FrameId;
+  to: FrameId;
+  /** #RRGGBB shown on the timeline. */
+  color: string;
+  direction: TagDirection;
+  /** Times the tag plays in a row when played or exported; 0 = forever. */
+  repeat: number;
 }
 
 export type LoopMode = 'loop' | 'once' | 'pingpong';
@@ -88,6 +105,8 @@ export interface DocState {
   /** Bottom-to-top. */
   layers: LayerNode[];
   frames: Frame[];
+  /** Animation tags, in the order they were created. */
+  tags: Tag[];
   /** `${layerId}/${frameId}` → image. A missing entry is a transparent cel. */
   cels: Readonly<Record<string, ImageId>>;
   palette: Palette;

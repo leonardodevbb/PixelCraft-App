@@ -46,6 +46,7 @@ export function createDocument(opts: NewDocumentOptions): ProjectDocument {
     animation: { ...DEFAULT_ANIMATION },
     tiles: { ...DEFAULT_TILES },
     guides: [],
+    tags: [],
     symmetry: { horizontal: false, vertical: false, axisX: opts.width / 2, axisY: opts.height / 2 },
   };
   return { id: newId('D'), name: opts.name?.trim() || 'Sem título', state, images };

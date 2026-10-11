@@ -18,6 +18,7 @@ import { TutorialDialog } from './TutorialDialog';
 import { RecentDialog } from './RecentDialog';
 import { DiagnosticsDialog } from './DiagnosticsDialog';
 import { DocumentPropertiesDialog } from './DocumentPropertiesDialog';
+import { TagDialog } from './TagDialog';
 
 export function DialogHost() {
   const d = useEditor((s) => s.dialog);
@@ -71,6 +72,8 @@ export function DialogHost() {
       return <TutorialDialog />;
     case 'tileset':
       return <TilesDialog />;
+    case 'tag':
+      return <TagDialog tagId={d.tagId} from={d.from} to={d.to} />;
     case 'text':
       return <TextDialog x={d.x} y={d.y} />;
     default:

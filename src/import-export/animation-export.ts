@@ -1,6 +1,6 @@
 import { playbackOrder } from '../animation/playback';
 import type { ImageLookup } from '../layers/compose';
-import type { DocState, Frame } from '../project/model';
+import type { AnimationSettings, DocState, Frame } from '../project/model';
 import type { RGBA } from '../raster/color';
 import type { PixelBuffer } from '../raster/pixel-buffer';
 import { encodeGif, type GifEncodeOptions, type GifEncodeReport, type GifFrameIn } from './gif';
@@ -8,18 +8,25 @@ import { renderFrameForExport } from './export-image';
 import { encodePng } from './png';
 import { buildSpritesheet, frameTags, spritesheetJson, type SheetOptions } from './spritesheet';
 
-/** 'all' or the name of a frame tag (its range runs until the next tag). */
+/** 'all' or the id of an animation tag. */
 export type FrameRange = string;
 
 export function framesInRange(state: DocState, range: FrameRange): Frame[] {
   if (range === 'all') return state.frames;
-  const tag = frameTags(state.frames).find((t) => t.name === range);
+  const tag = frameTags(state).find((t) => t.id === range);
   return tag ? state.frames.slice(tag.from, tag.to + 1) : state.frames;
 }
 
+/** Playback settings for a range: a tag plays with its own direction. */
+export function rangeAnimation(state: DocState, range: FrameRange): Pick<AnimationSettings, 'loop' | 'direction'> {
+  const tag = range === 'all' ? undefined : state.tags.find((t) => t.id === range);
+  if (!tag) return state.animation;
+  return { loop: tag.direction === 'pingpong' ? 'pingpong' : 'loop', direction: tag.direction === 'reverse' ? 'reverse' : 'forward' };
+}
+
 export function rangeOptions(state: DocState): { value: string; label: string }[] {
-  const tags = frameTags(state.frames);
-  return [{ value: 'all', label: `Todos os quadros (${state.frames.length})` }, ...tags.map((t) => ({ value: t.name, label: `Marcador "${t.name}" (${t.to - t.from + 1})` }))];
+  const tags = frameTags(state);
+  return [{ value: 'all', label: `Todos os quadros (${state.frames.length})` }, ...tags.map((t) => ({ value: t.id, label: `Tag "${t.name}" (${t.to - t.from + 1})` }))];
 }
 
 function render(state: DocState, lookup: ImageLookup, frames: Frame[], scale: number, background: RGBA | null): PixelBuffer[] {
@@ -39,7 +46,7 @@ export interface GifExportOptions {
 export function prepareGif(state: DocState, lookup: ImageLookup, o: GifExportOptions): { frames: GifFrameIn[]; options: GifEncodeOptions } {
   const frames = framesInRange(state, o.range);
   const images = render(state, lookup, frames, o.scale, o.background);
-  const order = playbackOrder(frames.length, state.animation);
+  const order = playbackOrder(frames.length, rangeAnimation(state, o.range));
   return {
     frames: order.map((i) => ({ image: images[i]!, delayMs: frames[i]!.duration })),
     options: { loop: o.loop, alphaThreshold: o.alphaThreshold, matte: o.background },
@@ -75,10 +82,17 @@ export function exportSpritesheet(
   const { image, geometry } = buildSpritesheet(images, o);
   const base = o.imageName.replace(/\.png$/i, '');
   const first = state.frames.indexOf(frames[0]!);
-  const tags = frameTags(state.frames, state.animation.loop === 'pingpong' ? 'pingpong' : state.animation.direction)
+  const tags = frameTags(state)
     .map((t) => ({ ...t, from: t.from - first, to: t.to - first }))
     .filter((t) => t.to >= 0 && t.from < frames.length)
-    .map((t) => ({ ...t, from: Math.max(0, t.from), to: Math.min(frames.length - 1, t.to) }));
+    .map((t) => ({
+      name: t.name,
+      from: Math.max(0, t.from),
+      to: Math.min(frames.length - 1, t.to),
+      direction: t.direction,
+      color: `${t.color}ff`,
+      ...(t.repeat ? { repeat: String(t.repeat) } : {}),
+    }));
   const json = spritesheetJson({ imageName: o.imageName, baseName: base, frames, geometry, scale: o.scale, tags, appVersion: o.appVersion });
   return { png: encodePng(image, { text: { Software: o.generator } }), json, width: image.width, height: image.height };
 }

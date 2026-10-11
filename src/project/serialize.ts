@@ -70,7 +70,8 @@ export function serializeProject(doc: ProjectDocument, opts: SerializeOptions): 
       width: s.width,
       height: s.height,
       layers: layersToJson(s.layers),
-      frames: s.frames.map((f) => (f.tag ? { id: f.id, duration: f.duration, tag: f.tag } : { id: f.id, duration: f.duration })),
+      frames: s.frames.map((f) => ({ id: f.id, duration: f.duration })),
+      tags: s.tags.map((t) => ({ ...t })),
       cels: { ...s.cels },
       palette: { id: s.palette.id, name: s.palette.name, colors: s.palette.colors.map((c) => toHex(c, true)) },
       animation: { ...s.animation },
@@ -148,6 +149,8 @@ export function deserializeProject(bytes: Uint8Array): ProjectDocument {
   const d = m.document;
   const layers = layersFromJson(d.layers);
   validateStructure(layers, d.frames.map((f) => f.id), d.cels, m.images, d.width, d.height);
+  const frameIds = new Set(d.frames.map((f) => f.id));
+  for (const t of d.tags) if (!frameIds.has(t.from) || !frameIds.has(t.to)) throw new ProjectFormatError(`A tag "${t.name}" aponta para um quadro inexistente.`);
 
   const images = new Map<string, PixelBuffer>();
   let total = 0;
@@ -174,6 +177,7 @@ export function deserializeProject(bytes: Uint8Array): ProjectDocument {
     height: d.height,
     layers,
     frames: d.frames.map((f) => ({ ...f })),
+    tags: d.tags.map((t) => ({ ...t })),
     cels: { ...d.cels },
     palette: { id: d.palette.id, name: d.palette.name, colors },
     animation: { ...d.animation },

@@ -91,3 +91,45 @@ test('drawing tools, inks and on-canvas transform', async () => {
 
   await quit(app);
 });
+
+test('animation tags, frame range selection and copy/paste of frames', async () => {
+  const { app, page } = await launch();
+  await newDoc(page, 8, 8);
+  // Three frames, each with a pixel in its own column.
+  await page.getByTestId('tool-pencil').click();
+  for (let i = 0; i < 3; i++) {
+    if (i > 0) await page.getByTestId('frame-add').click();
+    const p = await pixelToPage(page, i, 0);
+    await page.mouse.click(p.x, p.y);
+  }
+  const cells = page.getByTestId('frame-cell');
+  await expect(cells).toHaveCount(3);
+
+  // Shift+click picks frames 2–3, then a tag is created from them.
+  await cells.nth(1).click();
+  await cells.nth(2).click({ modifiers: ['Shift'] });
+  await page.getByTestId('tag-new').click();
+  await expect(page.getByTestId('tag-from')).toHaveValue('2');
+  await expect(page.getByTestId('tag-to')).toHaveValue('3');
+  await page.getByTestId('tag-name').fill('andar');
+  await page.getByTestId('tag-apply').click();
+  await expect(page.getByTestId('tag-band-start')).toHaveText('andar');
+
+  // Copy the two selected frames and paste them after the last one.
+  await page.keyboard.press('Alt+c');
+  await page.keyboard.press('Alt+v');
+  await expect(cells).toHaveCount(5);
+  expect((await state(page)).activeFrame).toBe(3);
+  expect(await pixel(page, 1, 0)).not.toBe(0);
+
+  // Edit the tag through its band, then delete it.
+  await page.getByTestId('tag-band-start').click();
+  await page.getByTestId('tag-name').fill('correr');
+  await page.getByTestId('tag-apply').click();
+  await expect(page.getByTestId('tag-band-start')).toHaveText('correr');
+  await page.getByTestId('tag-band-start').click();
+  await page.getByTestId('tag-delete').click();
+  await expect(page.getByTestId('tag-band-start')).toHaveCount(0);
+
+  await quit(app);
+});

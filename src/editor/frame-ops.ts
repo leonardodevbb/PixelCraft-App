@@ -1,6 +1,10 @@
 import { LIMITS } from '../project/limits';
-import { celKey, makeFrame, parseCelKey, type AnimationSettings, type FrameId, type ImageId, type LayerId } from '../project/model';
+import { celKey, makeFrame, parseCelKey, pixelLayers, type AnimationSettings, type FrameId, type ImageId, type LayerId } from '../project/model';
+import { PixelBuffer } from '../raster/pixel-buffer';
 import { EditorError, type EditorSession } from './session';
+import { fixTagsAfterRemoval, TAG_COLORS } from '../animation/tags';
+import { newId } from '../project/ids';
+import type { Tag } from '../project/model';
 
 function assertRoom(s: EditorSession, extra = 1): void {
   if (s.state.frames.length + extra > LIMITS.maxFrames) throw new EditorError(`Limite de ${LIMITS.maxFrames} quadros atingido.`);
@@ -67,7 +71,8 @@ export function deleteFrame(s: EditorSession, id: FrameId = s.activeFrameId): vo
     (cur) => {
       const cels: Record<string, ImageId> = {};
       for (const [k, v] of Object.entries(cur.cels)) if (parseCelKey(k).frameId !== id) cels[k] = v;
-      return { ...cur, frames: cur.frames.filter((f) => f.id !== id), cels };
+      const frames = cur.frames.filter((f) => f.id !== id);
+      return { ...cur, frames, cels, tags: fixTagsAfterRemoval(cur, frames) };
     },
     { frameId: nextActive },
   );
@@ -108,16 +113,50 @@ export function setAnimation(s: EditorSession, patch: Partial<AnimationSettings>
   s.apply('Configurar animação', (st) => ({ ...st, animation: { ...st.animation, ...patch } }));
 }
 
-export function setFrameTag(s: EditorSession, id: FrameId, tag: string | null): void {
-  const t = tag?.trim().slice(0, 60) || undefined;
-  s.apply(t ? 'Marcar quadro' : 'Remover marcador', (st) => ({
-    ...st,
-    frames: st.frames.map((f) => {
-      if (f.id !== id) return f;
-      const { tag: _old, ...rest } = f;
-      return t ? { ...rest, tag: t } : rest;
-    }),
-  }));
+/** Creates a tag over the frames from index `from` to `to` (inclusive). */
+export function addTag(s: EditorSession, from: number, to: number, props: Partial<Omit<Tag, 'id' | 'from' | 'to'>> = {}): string {
+  const frames = s.state.frames;
+  const a = frames[Math.max(0, Math.min(from, to))];
+  const b = frames[Math.min(frames.length - 1, Math.max(from, to))];
+  if (!a || !b) throw new EditorError('Intervalo de quadros inválido.');
+  const n = s.state.tags.length;
+  const tag: Tag = {
+    id: newId('T'),
+    name: cleanTagName(props.name) ?? `Tag ${n + 1}`,
+    from: a.id,
+    to: b.id,
+    color: props.color ?? TAG_COLORS[n % TAG_COLORS.length]!,
+    direction: props.direction ?? 'forward',
+    repeat: props.repeat ?? 0,
+  };
+  s.apply('Nova tag', (st) => ({ ...st, tags: [...st.tags, tag] }));
+  return tag.id;
+}
+
+function cleanTagName(name: string | undefined): string | undefined {
+  return name?.trim().slice(0, 60) || undefined;
+}
+
+export function updateTag(s: EditorSession, id: string, patch: Partial<Omit<Tag, 'id'>>): void {
+  const t = s.state.tags.find((x) => x.id === id);
+  if (!t) throw new EditorError('Tag inexistente.');
+  const next = { ...t, ...patch, name: cleanTagName(patch.name) ?? t.name, repeat: Math.max(0, Math.min(1000, Math.round(patch.repeat ?? t.repeat))) };
+  if ((Object.keys(next) as (keyof Tag)[]).every((k) => next[k] === t[k])) return;
+  s.apply('Editar tag', (st) => ({ ...st, tags: st.tags.map((x) => (x.id === id ? next : x)) }));
+}
+
+/** Changes which frames a tag covers (indices, inclusive). */
+export function setTagRange(s: EditorSession, id: string, from: number, to: number): void {
+  const frames = s.state.frames;
+  const a = frames[Math.max(0, Math.min(from, to))];
+  const b = frames[Math.min(frames.length - 1, Math.max(from, to))];
+  if (!a || !b) throw new EditorError('Intervalo de quadros inválido.');
+  updateTag(s, id, { from: a.id, to: b.id });
+}
+
+export function removeTag(s: EditorSession, id: string): void {
+  if (!s.state.tags.some((t) => t.id === id)) return;
+  s.apply('Remover tag', (st) => ({ ...st, tags: st.tags.filter((t) => t.id !== id) }));
 }
 
 export function reverseFrames(s: EditorSession): void {
@@ -168,4 +207,126 @@ export function goToFrame(s: EditorSession, delta: number, wrap = true): void {
   if (wrap) i = ((i % n) + n) % n;
   else i = Math.max(0, Math.min(n - 1, i));
   s.setActiveFrame(s.state.frames[i]!.id);
+}
+
+/* ---------- several frames at once ---------- */
+
+/** Indices of the given frames in timeline order. */
+function indicesOf(s: EditorSession, ids: readonly FrameId[]): number[] {
+  const set = new Set(ids);
+  const out: number[] = [];
+  s.state.frames.forEach((f, i) => set.has(f.id) && out.push(i));
+  return out;
+}
+
+/** Deletes several frames in one step; at least one frame always remains. */
+export function deleteFrames(s: EditorSession, ids: readonly FrameId[]): void {
+  const idx = indicesOf(s, ids);
+  if (!idx.length) return;
+  if (idx.length >= s.state.frames.length) throw new EditorError('A animação precisa de pelo menos um quadro.');
+  if (idx.length === 1) return deleteFrame(s, s.state.frames[idx[0]!]!.id);
+  s.cancelDraft();
+  const gone = new Set(idx.map((i) => s.state.frames[i]!.id));
+  const after = s.state.frames.slice(idx.at(-1)! + 1).find((f) => !gone.has(f.id)) ?? [...s.state.frames].reverse().find((f) => !gone.has(f.id))!;
+  s.apply(
+    'Excluir quadros',
+    (cur) => {
+      const cels: Record<string, ImageId> = {};
+      for (const [k, v] of Object.entries(cur.cels)) if (!gone.has(parseCelKey(k).frameId)) cels[k] = v;
+      const frames = cur.frames.filter((f) => !gone.has(f.id));
+      return { ...cur, frames, cels, tags: fixTagsAfterRemoval(cur, frames) };
+    },
+    { frameId: after.id },
+  );
+}
+
+/** Frames copied to the internal clipboard: durations and a copy of each layer's pixels. */
+export interface FrameClip {
+  frames: { duration: number; cels: { layerId: LayerId; layerIndex: number; image: PixelBuffer }[] }[];
+}
+
+export function copyFrames(s: EditorSession, ids: readonly FrameId[]): FrameClip {
+  const layers = pixelLayers(s.state.layers);
+  return {
+    frames: indicesOf(s, ids).map((i) => {
+      const f = s.state.frames[i]!;
+      const cels: FrameClip['frames'][number]['cels'] = [];
+      layers.forEach((l, layerIndex) => {
+        const img = s.celImage(l.id, f.id);
+        if (img && !img.isEmpty()) cels.push({ layerId: l.id, layerIndex, image: img.clone() });
+      });
+      return { duration: f.duration, cels };
+    }),
+  };
+}
+
+/**
+ * Inserts copied frames after the active frame. Pixels go back to the layer
+ * they came from; frames copied from another document land on the layer in
+ * the same position (or the active layer if there are fewer layers).
+ * Returns the new frame ids.
+ */
+export function pasteFrames(s: EditorSession, clip: FrameClip): FrameId[] {
+  if (!clip.frames.length) return [];
+  s.cancelDraft();
+  assertRoom(s, clip.frames.length);
+  const st = s.state;
+  const layers = pixelLayers(st.layers);
+  const at = frameIndex(s) + 1;
+  const cels: Record<string, ImageId> = { ...st.cels };
+  const newImages: ImageId[] = [];
+  const made = clip.frames.map((cf) => {
+    const f = makeFrame(clampDuration(cf.duration));
+    for (const c of cf.cels) {
+      const layer = layers.find((l) => l.id === c.layerId) ?? layers[c.layerIndex] ?? layers.find((l) => l.id === s.activeLayerId);
+      if (!layer) continue;
+      let img = c.image;
+      if (img.width !== st.width || img.height !== st.height) {
+        const fit = new PixelBuffer(st.width, st.height);
+        fit.paste(img, 0, 0);
+        img = fit;
+      } else img = img.clone();
+      const id = s.addImage(img);
+      newImages.push(id);
+      cels[celKey(layer.id, f.id)] = id;
+    }
+    return f;
+  });
+  const frames = [...st.frames.slice(0, at), ...made, ...st.frames.slice(at)];
+  s.commit(made.length > 1 ? 'Colar quadros' : 'Colar quadro', { ...st, frames, cels }, [], newImages, { ...s.context, frameId: made[0]!.id });
+  return made.map((f) => f.id);
+}
+
+/** Duplicates a block of frames right after its last frame. */
+export function duplicateFrames(s: EditorSession, ids: readonly FrameId[]): FrameId[] {
+  const idx = indicesOf(s, ids);
+  if (!idx.length) return [];
+  const clip = copyFrames(s, ids);
+  const last = s.state.frames[idx.at(-1)!]!.id;
+  if (s.activeFrameId !== last) s.setActiveFrame(last);
+  return pasteFrames(s, clip);
+}
+
+/** Moves a block of frames so it starts at index `to` (in the timeline without the block). */
+export function moveFrames(s: EditorSession, ids: readonly FrameId[], to: number): void {
+  const idx = indicesOf(s, ids);
+  if (!idx.length) return;
+  s.cancelDraft();
+  const block = idx.map((i) => s.state.frames[i]!);
+  const rest = s.state.frames.filter((_, i) => !idx.includes(i));
+  const target = Math.max(0, Math.min(rest.length, to));
+  const frames = [...rest.slice(0, target), ...block, ...rest.slice(target)];
+  if (frames.every((f, i) => f === s.state.frames[i])) return;
+  s.apply('Reordenar quadros', (st) => ({ ...st, frames }));
+}
+
+/** Reverses the order of the given frames in place (all frames when fewer than two are given). */
+export function reverseFrameRange(s: EditorSession, ids: readonly FrameId[]): void {
+  const idx = indicesOf(s, ids);
+  if (idx.length < 2) return reverseFrames(s);
+  s.cancelDraft();
+  const frames = [...s.state.frames];
+  const picked = idx.map((i) => frames[i]!).reverse();
+  idx.forEach((i, k) => (frames[i] = picked[k]!));
+  s.apply('Inverter ordem dos quadros', (st) => ({ ...st, frames }));
 }

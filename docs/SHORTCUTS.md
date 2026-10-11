@@ -168,8 +168,11 @@ Gestos que não são comandos:
 | Inverter ordem dos quadros | — |
 | Duração do quadro… | — |
 | Aplicar duração a todos os quadros… | — |
-| Marcador do quadro… | — |
-| Remover marcador do quadro | — |
+| Nova tag com os quadros selecionados… | <kbd>Alt+T</kbd> |
+| Editar tag do quadro… | — |
+| Tocar só a tag do quadro atual | — |
+| Copiar quadros | <kbd>Alt+C</kbd> |
+| Colar quadros depois do atual | <kbd>Alt+V</kbd> |
 | Vincular célula ao quadro anterior | — |
 | Desvincular célula | — |
 | Onion skin | <kbd>F3</kbd> |
