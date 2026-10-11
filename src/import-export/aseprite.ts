@@ -485,6 +485,7 @@ export function decodeAseprite(bytes: Uint8Array, name = 'Sem título'): Project
     tiles: gridW > 0 && gridH > 0 ? { width: gridW, height: gridH, offsetX: Math.max(0, gridX % gridW), offsetY: Math.max(0, gridY % gridH) } : { ...DEFAULT_TILES },
     guides: [],
     symmetry: { horizontal: false, vertical: false, axisX: width / 2, axisY: height / 2 },
+    ...(depth === 8 && colors.length ? { colorMode: 'indexed' as const } : {}),
   };
   if (allLayers(roots).length > LIMITS.maxLayers) throw new AsepriteError('O arquivo tem camadas demais.');
   return { id: newId('D'), name, state, images };

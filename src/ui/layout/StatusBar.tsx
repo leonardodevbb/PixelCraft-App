@@ -27,6 +27,11 @@ export function StatusBar() {
           <span>
             {session.state.width}×{session.state.height} px
           </span>
+          {session.state.colorMode === 'indexed' && (
+            <span data-testid="status-indexed" title="Modo indexado: só as cores da paleta são usadas">
+              Indexado · {session.state.palette.colors.length} cores
+            </span>
+          )}
           <span>Zoom {Math.round(zoom * 100)}%</span>
           <span>
             Quadro {frameIndex + 1}/{session.state.frames.length}

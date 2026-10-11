@@ -72,6 +72,7 @@ export const documentSchema = z.object({
     axisX: z.number().min(0).max(LIMITS.maxDimension),
     axisY: z.number().min(0).max(LIMITS.maxDimension),
   }),
+  colorMode: z.enum(['rgb', 'indexed']).optional(),
 });
 
 export const imageEntrySchema = z.object({

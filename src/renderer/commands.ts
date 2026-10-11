@@ -5,6 +5,8 @@ import { useEditor } from './state/editor-store';
 import { usePrefs } from './state/preferences';
 import { closeProject, exportAseprite, openProjectDialog, save, saveAs } from './actions/documents';
 import { exportSvg } from './actions/export';
+import { setColorMode } from '../editor/color-mode';
+import { addRamp, paletteFromDrawing, PALETTE_SORT_LABELS, removeUnusedColors, sortPalette, type PaletteSort } from '../editor/palette-ops';
 import { moveSelected } from '../editor/selection-ops';
 import { centerView, fitView, zoomStep, zoomTo } from './actions/view';
 import { attempt, copy, cut, deleteSelection, nudge, paste, selectAll } from './actions/edit';
@@ -307,6 +309,27 @@ export function registerCommands(): void {
     { id: 'image.center', label: 'Centralizar conteúdo da camada', category: 'Imagem', run: () => attempt((s) => centerContent(s, 'cel')), enabled: hasDoc },
     { id: 'image.invert', label: 'Inverter cores', category: 'Imagem', keys: ['Ctrl+I'], run: () => attempt((s) => invertCels(s, 'cel')), enabled: hasDoc },
     { id: 'image.replaceColor', label: 'Substituir cor…', category: 'Imagem', keys: ['Shift+R'], run: () => ed().openDialog({ type: 'replace-color' }), enabled: hasDoc },
+    { id: 'image.hueSaturation', label: 'Matiz e saturação…', category: 'Imagem', keys: ['Ctrl+U'], run: () => ed().openDialog({ type: 'adjust', kind: 'hue-saturation' }), enabled: hasDoc },
+    { id: 'image.brightnessContrast', label: 'Brilho e contraste…', category: 'Imagem', run: () => ed().openDialog({ type: 'adjust', kind: 'brightness-contrast' }), enabled: hasDoc },
+    { id: 'image.grayscale', label: 'Tons de cinza…', category: 'Imagem', run: () => ed().openDialog({ type: 'adjust', kind: 'grayscale' }), enabled: hasDoc },
+    { id: 'image.outline', label: 'Contorno…', category: 'Imagem', keys: ['Ctrl+Alt+O'], run: () => ed().openDialog({ type: 'adjust', kind: 'outline' }), enabled: hasDoc },
+    { id: 'image.despeckle', label: 'Remover pontos soltos…', category: 'Imagem', run: () => ed().openDialog({ type: 'adjust', kind: 'despeckle' }), enabled: hasDoc },
+    {
+      id: 'image.colorRgb',
+      label: 'Modo RGB (cores livres)',
+      category: 'Imagem',
+      run: () => attempt((s) => setColorMode(s, 'rgb')),
+      enabled: hasDoc,
+      checked: () => ed().session?.state.colorMode !== 'indexed',
+    },
+    {
+      id: 'image.colorIndexed',
+      label: 'Modo indexado (só cores da paleta)',
+      category: 'Imagem',
+      run: () => attempt((s) => setColorMode(s, 'indexed')),
+      enabled: hasDoc,
+      checked: () => ed().session?.state.colorMode === 'indexed',
+    },
     { id: 'image.clearLayer', label: 'Limpar camada', category: 'Imagem', run: () => attempt((s) => clearCels(s, 'cel')), enabled: hasDoc },
     { id: 'image.clearFrame', label: 'Limpar quadro (todas as camadas)', category: 'Imagem', run: () => attempt((s) => clearCels(s, 'frame')), enabled: hasDoc },
     {
@@ -541,6 +564,42 @@ export function registerCommands(): void {
     { id: 'palette.import', label: 'Importar paleta…', category: 'Paleta', run: () => void importPaletteFile(), enabled: hasDoc },
     { id: 'palette.export', label: 'Exportar paleta…', category: 'Paleta', run: () => void exportPaletteFile(), enabled: hasDoc },
     { id: 'palette.tools', label: 'Ferramentas de paleta…', category: 'Paleta', run: () => ed().openDialog({ type: 'palette-tools' }), enabled: hasDoc },
+    ...(Object.keys(PALETTE_SORT_LABELS) as PaletteSort[]).map(
+      (by): Command => ({ id: `palette.sort.${by}`, label: `Ordenar paleta: ${PALETTE_SORT_LABELS[by].toLowerCase()}`, category: 'Paleta', run: () => attempt((s) => sortPalette(s, by)), enabled: hasDoc }),
+    ),
+    {
+      id: 'palette.ramp',
+      label: 'Gerar degradê entre as cores primária e secundária…',
+      category: 'Paleta',
+      enabled: hasDoc,
+      run: async () => {
+        const v = await promptDialog({ title: 'Degradê na paleta', label: 'Quantas cores (2 a 64)?', initial: '6', confirmLabel: 'Gerar' });
+        const n = Number(v);
+        if (!v || !Number.isFinite(n)) return;
+        const added = attempt((s) => addRamp(s, ed().primary, ed().secondary, n));
+        if (added !== undefined) ed().toast(added ? 'success' : 'info', added ? `${added} cor(es) adicionada(s) à paleta.` : 'A paleta já tem essas cores.');
+      },
+    },
+    {
+      id: 'palette.fromDrawing',
+      label: 'Criar paleta com as cores do desenho',
+      category: 'Paleta',
+      enabled: hasDoc,
+      run: () => {
+        const n = attempt((s) => paletteFromDrawing(s));
+        if (n !== undefined) ed().toast('success', `Paleta criada com ${n} cor(es).`);
+      },
+    },
+    {
+      id: 'palette.removeUnused',
+      label: 'Remover cores sem uso da paleta',
+      category: 'Paleta',
+      enabled: hasDoc,
+      run: () => {
+        const n = attempt((s) => removeUnusedColors(s));
+        if (n !== undefined) ed().toast(n ? 'success' : 'info', n ? `${n} cor(es) removida(s).` : 'Todas as cores da paleta estão em uso.');
+      },
+    },
 
     // View
     { id: 'view.zoomIn', label: 'Aumentar zoom', category: 'Visualizar', keys: ['Plus', 'Ctrl+Plus'], repeat: true, run: () => zoomStep(1), enabled: hasDoc },

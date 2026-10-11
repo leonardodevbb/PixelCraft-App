@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { indexedColor } from '../../palette/analysis';
 import { getTool, type ColorSlot, type Tool, type ToolHost, type ToolId, type ToolPointer } from '../../editor/tools';
 import { sampleColor } from '../../editor/tools/eyedropper';
 import { transformTool } from '../../editor/tools/transform-tool';
@@ -47,7 +48,12 @@ function makeHost(r: CanvasRenderer): ToolHost {
   return {
     session: st.session!,
     options: st.options,
-    color: (slot: ColorSlot) => (slot === 'primary' ? useEditor.getState().primary : useEditor.getState().secondary),
+    color: (slot: ColorSlot) => {
+      const e = useEditor.getState();
+      const c = slot === 'primary' ? e.primary : e.secondary;
+      // Indexed mode: tools paint (and preview) with the nearest palette colour.
+      return e.session?.state.colorMode === 'indexed' ? indexedColor(c, e.session.state.palette.colors) : c;
+    },
     setColor: (slot, c) => useEditor.getState().setColor(slot, c),
     notify: (m) => useEditor.getState().toast('error', m),
     symmetryActive: st.symmetryOn,

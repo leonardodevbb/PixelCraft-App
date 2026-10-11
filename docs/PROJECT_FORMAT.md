@@ -32,7 +32,8 @@ thumbnail.png       miniatura do primeiro quadro (opcional, ignorada ao abrir)
     "animation": { "fps": 10, "loop": "loop|once|pingpong", "direction": "forward|reverse" },
     "tiles": { "width": 16, "height": 16, "offsetX": 0, "offsetY": 0 },
     "guides": [ { "axis": "x|y", "position": 8 } ],
-    "symmetry": { "horizontal": false, "vertical": false, "axisX": 16, "axisY": 16 }
+    "symmetry": { "horizontal": false, "vertical": false, "axisX": 16, "axisY": 16 },
+    "colorMode": "indexed"                 // opcional; ausente = RGB
   },
   "images": { "I…": { "file": "images/I….png", "width": 32, "height": 32 } }
 }
@@ -41,6 +42,9 @@ thumbnail.png       miniatura do primeiro quadro (opcional, ignorada ao abrir)
 * Várias células podem apontar para a mesma imagem (células vinculadas).
 * Toda imagem tem exatamente as dimensões do documento.
 * Cores de paleta são `#RRGGBBAA`.
+* `colorMode: "indexed"` marca o modo indexado: os pixels continuam em RGBA,
+  mas o editor garante que só usem cores da paleta. Versões anteriores ignoram
+  o campo e abrem o arquivo normalmente em RGB.
 
 ## Validação ao abrir
 

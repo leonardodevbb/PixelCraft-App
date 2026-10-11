@@ -78,6 +78,7 @@ export function serializeProject(doc: ProjectDocument, opts: SerializeOptions): 
       tiles: { ...s.tiles },
       guides: s.guides.map((g) => ({ ...g })),
       symmetry: { ...s.symmetry },
+      ...(s.colorMode === 'indexed' ? { colorMode: 'indexed' as const } : {}),
     },
     images: imagesJson,
   };
@@ -184,6 +185,7 @@ export function deserializeProject(bytes: Uint8Array): ProjectDocument {
     tiles: { ...d.tiles },
     guides: d.guides.map((g) => ({ ...g })),
     symmetry: { ...d.symmetry },
+    ...(d.colorMode === 'indexed' ? { colorMode: 'indexed' as const } : {}),
   };
   return { id: d.id, name: d.name, state, images };
 }

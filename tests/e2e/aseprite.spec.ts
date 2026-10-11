@@ -190,3 +190,38 @@ test('exports to .aseprite and opens it back, plus APNG and SVG', async () => {
 
   await quit(app);
 });
+
+test('colour adjustments preview live, indexed mode keeps pixels on the palette', async () => {
+  const { app, page } = await launch();
+  await newDoc(page, 8, 8);
+  await page.getByTestId('tool-pencil').click();
+  await page.getByTestId('palette-10').click();
+  const p = await pixelToPage(page, 2, 2);
+  await page.mouse.click(p.x, p.y);
+  const red = await pixel(page, 2, 2);
+
+  // Hue/saturation: the canvas previews, Cancel restores, Apply commits once.
+  await page.keyboard.press('Control+u');
+  await expect(page.getByTestId('adjust-dialog')).toBeVisible();
+  const dialog = page.getByTestId('adjust-dialog');
+  await dialog.getByLabel('Saturação').fill('-100');
+  const steps = (await state(page)).history.length;
+  await dialog.getByRole('button', { name: 'Cancelar' }).click();
+  expect(await pixel(page, 2, 2)).toBe(red);
+  expect((await state(page)).history.length).toBe(steps);
+  await page.keyboard.press('Control+u');
+  await dialog.getByLabel('Saturação').fill('-100');
+  await page.getByTestId('adjust-apply').click();
+  const grey = await pixel(page, 2, 2);
+  expect(grey >>> 24).toBe((grey >>> 16) & 255);
+  expect((await state(page)).history.at(-1)).toBe('Matiz e saturação');
+  await page.keyboard.press('Control+z');
+
+  // Indexed mode: a non-palette colour snaps to the palette.
+  await runCommand(page, 'modo indexado');
+  await expect(page.getByTestId('status-indexed')).toBeVisible();
+  expect((await state(page)).history.at(-1)).toBe('Modo de cor: indexado');
+  expect(await pixel(page, 2, 2)).toBe(red);
+
+  await quit(app);
+});

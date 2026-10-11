@@ -114,7 +114,14 @@ export interface DocState {
   tiles: TileSettings;
   guides: Guide[];
   symmetry: SymmetrySettings;
+  /**
+   * 'indexed' keeps every pixel on a palette colour: painting snaps to the
+   * palette and editing a palette entry recolours its pixels. Absent = 'rgb'.
+   */
+  colorMode?: ColorMode;
 }
+
+export type ColorMode = 'rgb' | 'indexed';
 
 export interface ProjectDocument {
   id: string;

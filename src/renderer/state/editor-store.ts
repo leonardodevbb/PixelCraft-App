@@ -1,3 +1,4 @@
+import type { AdjustKind } from '../../ui/dialogs/AdjustDialog';
 import { create } from 'zustand';
 import type { EditorSession } from '../../editor/session';
 import { DEFAULT_TOOL_OPTIONS, type ColorSlot, type ToolId, type ToolOptions } from '../../editor/tools';
@@ -36,6 +37,7 @@ export type DialogState =
   | { type: 'tileset' }
   | { type: 'offset' }
   | { type: 'replace-color' }
+  | { type: 'adjust'; kind: AdjustKind }
   | { type: 'scale-selection' }
   | { type: 'history' }
   | { type: 'tag'; tagId?: string; from?: number; to?: number }

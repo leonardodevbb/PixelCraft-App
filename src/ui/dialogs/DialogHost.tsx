@@ -1,3 +1,4 @@
+import { AdjustDialog } from './AdjustDialog';
 import { useEditor } from '../../renderer/state/editor-store';
 import { AboutDialog } from './AboutDialog';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -42,6 +43,8 @@ export function DialogHost() {
       return <ResizeContentDialog />;
     case 'offset':
       return <OffsetDialog />;
+    case 'adjust':
+      return <AdjustDialog kind={d.kind} />;
     case 'replace-color':
       return <ReplaceColorDialog />;
     case 'scale-selection':

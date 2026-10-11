@@ -132,3 +132,49 @@ export function medianCut(counts: Map<RGBA, number>, max: number): RGBA[] {
     return rgba(Math.round(r / n), Math.round(g / n), Math.round(bl / n));
   });
 }
+
+/**
+ * The palette entry an indexed-mode pixel becomes: mostly transparent pixels
+ * become transparent, everything else takes the nearest entry as is.
+ */
+export function indexedColor(c: RGBA, palette: readonly RGBA[]): RGBA {
+  if (alpha(c) < 128 || palette.length === 0) return alpha(c) < 128 ? 0 : c;
+  let best = palette[0]!;
+  let bd = Infinity;
+  for (const p of palette) {
+    if (alpha(p) === 0) continue;
+    const d = perceptualDistance(c, p);
+    if (d < bd) {
+      bd = d;
+      best = p;
+      if (d === 0 && p === c) break;
+    }
+  }
+  return best;
+}
+
+/** Returns a function that snaps colours to the palette, with a cache. */
+export function paletteSnapper(palette: readonly RGBA[]): (c: RGBA) => RGBA {
+  const cache = new Map<RGBA, RGBA>();
+  return (c) => {
+    let n = cache.get(c);
+    if (n === undefined) cache.set(c, (n = indexedColor(c, palette)));
+    return n;
+  };
+}
+
+/** Snaps every pixel of `buf` to the palette, in place. */
+export function snapBuffer(buf: PixelBuffer, palette: readonly RGBA[]): void {
+  const snap = paletteSnapper(palette);
+  const d = buf.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const c = ((d[i]! << 24) | (d[i + 1]! << 16) | (d[i + 2]! << 8) | d[i + 3]!) >>> 0;
+    const n = snap(c);
+    if (n === c) continue;
+    d[i] = n >>> 24;
+    d[i + 1] = (n >>> 16) & 255;
+    d[i + 2] = (n >>> 8) & 255;
+    d[i + 3] = n & 255;
+  }
+}
+

@@ -1,6 +1,7 @@
 import { composeFrame } from '../layers/compose';
 import { checkDimensions } from '../project/limits';
 import { celKey, findLayer, pixelLayers, type DocState, type ImageId } from '../project/model';
+import { snapBuffer } from '../palette/analysis';
 import { colorDistance, type RGBA } from '../raster/color';
 import { PixelBuffer } from '../raster/pixel-buffer';
 import type { Rect } from '../raster/rect';
@@ -335,11 +336,22 @@ export function replaceColor(s: EditorSession, from: RGBA, to: RGBA, tolerance: 
   return count;
 }
 
-/** Applies a pure pixel mapping (used by palette reduction). */
-export function mapColors(s: EditorSession, label: string, fn: (c: RGBA) => RGBA, scope: CelScope = 'all', patch?: (st: DocState) => DocState): void {
-  const keys = celKeysInScope(s, scope, true);
-  requireAnyEditable(s, keys);
-  const m = maskOf(s.selection);
+/**
+ * Applies a pure pixel mapping (used by palette reduction). `everywhere`
+ * ignores the selection and layer locks: palette edits in indexed mode must
+ * recolour every pixel of that colour.
+ */
+export function mapColors(
+  s: EditorSession,
+  label: string,
+  fn: (c: RGBA) => RGBA,
+  scope: CelScope = 'all',
+  patch?: (st: DocState) => DocState,
+  opts: { everywhere?: boolean } = {},
+): void {
+  const keys = celKeysInScope(s, scope, !opts.everywhere);
+  if (!opts.everywhere) requireAnyEditable(s, keys);
+  const m = opts.everywhere ? null : maskOf(s.selection);
   mapCels(s, label, keys, (img) => {
     let out: PixelBuffer | null = null;
     for (let y = 0; y < img.height; y++)
@@ -354,6 +366,27 @@ export function mapColors(s: EditorSession, label: string, fn: (c: RGBA) => RGBA
       }
     return out;
   }, patch);
+}
+
+/**
+ * Runs an image filter (colour adjustment, outline…) over the cels in scope,
+ * limited to the selection. In indexed mode the result snaps to the palette.
+ */
+export function filterCels(s: EditorSession, label: string, fn: (img: PixelBuffer, mask: ((x: number, y: number) => boolean) | undefined) => PixelBuffer, scope: CelScope = 'cel'): void {
+  const keys = celKeysInScope(s, scope, true);
+  requireAnyEditable(s, keys);
+  const m = maskOf(s.selection);
+  const st = s.state;
+  mapCels(s, label, keys, (img) => {
+    const out = fn(img, m);
+    if (st.colorMode === 'indexed') snapBuffer(out, st.palette.colors);
+    return out;
+  });
+}
+
+/** The selection as a mask function, for previews of filters. */
+export function selectionMask(s: EditorSession): ((x: number, y: number) => boolean) | undefined {
+  return maskOf(s.selection);
 }
 
 /** Composites a full-size buffer over the active cel (used by import as layer, etc.). */

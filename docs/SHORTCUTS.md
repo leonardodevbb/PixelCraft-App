@@ -120,6 +120,13 @@ Gestos que não são comandos:
 | Centralizar conteúdo da camada | — |
 | Inverter cores | <kbd>Ctrl+I</kbd> |
 | Substituir cor… | <kbd>Shift+R</kbd> |
+| Matiz e saturação… | <kbd>Ctrl+U</kbd> |
+| Brilho e contraste… | — |
+| Tons de cinza… | — |
+| Contorno… | <kbd>Ctrl+Alt+O</kbd> |
+| Remover pontos soltos… | — |
+| Modo RGB (cores livres) | — |
+| Modo indexado (só cores da paleta) | — |
 | Limpar camada | — |
 | Limpar quadro (todas as camadas) | — |
 | Limpar documento inteiro… | — |
@@ -210,6 +217,13 @@ Gestos que não são comandos:
 | Importar paleta… | — |
 | Exportar paleta… | — |
 | Ferramentas de paleta… | — |
+| Ordenar paleta: por matiz | — |
+| Ordenar paleta: por luminosidade | — |
+| Ordenar paleta: por saturação | — |
+| Ordenar paleta: por uso no desenho | — |
+| Gerar degradê entre as cores primária e secundária… | — |
+| Criar paleta com as cores do desenho | — |
+| Remover cores sem uso da paleta | — |
 
 ## Cores
 
