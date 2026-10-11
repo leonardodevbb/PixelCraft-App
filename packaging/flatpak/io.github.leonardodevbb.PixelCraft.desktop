@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=PixelCraft
+GenericName=Pixel Art Editor
+GenericName[pt_BR]=Editor de pixel art
+Comment=Draw and animate pixel art
+Comment[pt_BR]=Desenhe e anime pixel art
+Exec=pixelcraft %F
+Icon=io.github.leonardodevbb.PixelCraft
+Terminal=false
+Categories=Graphics;2DGraphics;RasterGraphics;
+Keywords=pixel;art;sprite;animation;gif;tileset;
+Keywords[pt_BR]=pixel;art;sprite;animação;gif;tileset;desenho;
+MimeType=application/x-pixelcraft;
+StartupWMClass=pixelcraft
+StartupNotify=true

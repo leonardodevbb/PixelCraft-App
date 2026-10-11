@@ -64,6 +64,31 @@ function iconPath(): string | undefined {
   return candidates.find((p) => existsSync(p));
 }
 
+/**
+ * `--smoke-test`: used by scripts/verify-packages.sh to prove an installed
+ * package starts. Loads the UI, checks the start screen rendered with the
+ * preload bridge, prints one line and exits (0 = ok).
+ */
+const SMOKE_TEST = process.argv.includes('--smoke-test');
+function smokeTest(win: BrowserWindow): void {
+  const fail = setTimeout(() => {
+    console.log('PIXELCRAFT_SMOKE_FAIL timeout');
+    app.exit(1);
+  }, 30000);
+  win.webContents.once('did-finish-load', () => {
+    setTimeout(() => {
+      void win.webContents
+        .executeJavaScript('JSON.stringify({ bridge: typeof window.pixelcraft === "object", start: !!document.querySelector("[data-testid=quick-16x16]") })')
+        .then((r: string) => {
+          const ok = JSON.parse(r) as { bridge: boolean; start: boolean };
+          clearTimeout(fail);
+          console.log(`${ok.bridge && ok.start ? 'PIXELCRAFT_SMOKE_OK' : 'PIXELCRAFT_SMOKE_FAIL'} ${app.getVersion()} ${distribution()} ${r}`);
+          app.exit(ok.bridge && ok.start ? 0 : 1);
+        });
+    }, 1500);
+  });
+}
+
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1400,
@@ -100,6 +125,7 @@ function createWindow(): BrowserWindow {
     return { action: 'deny' };
   });
   win.webContents.on('render-process-gone', (_e, d) => log.error('Renderer encerrado:', d.reason));
+  if (SMOKE_TEST) smokeTest(win);
 
   const devUrl = process.env.VITE_DEV_SERVER_URL;
   if (devUrl && !app.isPackaged) void win.loadURL(devUrl);

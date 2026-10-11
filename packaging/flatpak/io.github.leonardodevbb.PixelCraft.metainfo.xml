@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.leonardodevbb.PixelCraft</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>PixelCraft</name>
+  <summary>Draw and animate pixel art</summary>
+  <summary xml:lang="pt-BR">Desenhe e anime pixel art</summary>
+  <developer id="io.github.leonardodevbb">
+    <name>PixelCraft contributors</name>
+  </developer>
+  <description>
+    <p>PixelCraft is a pixel art and frame-by-frame animation editor that works offline and keeps your projects on your computer.</p>
+    <ul>
+      <li>Pencil, brush, eraser, shapes, fill, gradient with ordered dithering and bitmap text</li>
+      <li>Layers with groups, blend modes and opacity</li>
+      <li>Timeline with onion skin, tags and linked cels</li>
+      <li>Palettes (GPL, HEX, JASC, ACT), color reduction and analysis</li>
+      <li>Tiles with seamless preview and tileset export with a Tiled map</li>
+      <li>Export to PNG, GIF, JPEG, WebP, BMP, spritesheets and PNG sequences</li>
+    </ul>
+    <p xml:lang="pt-BR">PixelCraft é um editor de pixel art e animação quadro a quadro que funciona offline e guarda seus projetos no seu computador.</p>
+  </description>
+  <launchable type="desktop-id">io.github.leonardodevbb.PixelCraft.desktop</launchable>
+  <url type="homepage">https://github.com/leonardodevbb/PixelCraft-App</url>
+  <url type="bugtracker">https://github.com/leonardodevbb/PixelCraft-App/issues</url>
+  <categories>
+    <category>Graphics</category>
+    <category>2DGraphics</category>
+    <category>RasterGraphics</category>
+  </categories>
+  <keywords>
+    <keyword>pixel art</keyword>
+    <keyword>sprite</keyword>
+    <keyword>animation</keyword>
+  </keywords>
+  <provides>
+    <mediatype>application/x-pixelcraft</mediatype>
+    <binary>pixelcraft</binary>
+  </provides>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-10-11">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

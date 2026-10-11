@@ -1,0 +1,51 @@
+# Flatpak manifest. Built by scripts/build-flatpak.sh from the unpacked
+# Electron app that electron-builder leaves in release/linux-unpacked, so the
+# Flatpak contains exactly the same app as the .deb and the AppImage.
+app-id: io.github.leonardodevbb.PixelCraft
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '25.08'
+command: pixelcraft
+separate-locales: false
+finish-args:
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --device=dri
+  # Projects and exports usually live here; any other place is reachable
+  # through the file chooser portal.
+  - --filesystem=xdg-pictures
+  - --filesystem=xdg-documents
+  - --filesystem=xdg-download
+  # No --share=network: PixelCraft works offline.
+modules:
+  - name: pixelcraft
+    buildsystem: simple
+    build-commands:
+      - cp -a linux-unpacked /app/pixelcraft
+      - rm -f /app/pixelcraft/chrome-sandbox
+      - install -Dm755 pixelcraft.sh /app/bin/pixelcraft
+      - install -Dm644 io.github.leonardodevbb.PixelCraft.desktop -t /app/share/applications
+      - install -Dm644 io.github.leonardodevbb.PixelCraft.metainfo.xml -t /app/share/metainfo
+      - install -Dm644 pixelcraft-mime.xml /app/share/mime/packages/io.github.leonardodevbb.PixelCraft.xml
+      - install -Dm644 pixelcraft-app-icon.svg /app/share/icons/hicolor/scalable/apps/io.github.leonardodevbb.PixelCraft.svg
+      - for s in 16 24 32 48 64 128 256 512; do install -Dm644 icons/${s}x${s}.png /app/share/icons/hicolor/${s}x${s}/apps/io.github.leonardodevbb.PixelCraft.png; done
+    sources:
+      - type: dir
+        path: ../../release/linux-unpacked
+        dest: linux-unpacked
+      - type: dir
+        path: ../../build/icons
+        dest: icons
+      - type: file
+        path: pixelcraft.sh
+      - type: file
+        path: io.github.leonardodevbb.PixelCraft.desktop
+      - type: file
+        path: io.github.leonardodevbb.PixelCraft.metainfo.xml
+      - type: file
+        path: ../linux/pixelcraft-mime.xml
+      - type: file
+        path: ../../assets/branding/pixelcraft-app-icon.svg
