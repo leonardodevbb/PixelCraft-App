@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { playbackOrder } from '../../animation/playback';
-import { exportGif, exportSequence, exportSpritesheet, framesInRange, rangeOptions } from '../../import-export/animation-export';
+import { exportSequence, exportSpritesheet, framesInRange, prepareGif, rangeOptions } from '../../import-export/animation-export';
+import { encodeGifAsync } from '../../import-export/gif-async';
 import { MAX_EXPORT_DIMENSION } from '../../import-export/export-image';
 import { sheetFits, sheetGeometry, type SheetLayout } from '../../import-export/spritesheet';
 import { parseHex, rgba } from '../../raster/color';
@@ -59,15 +60,23 @@ export function AnimationExportDialog({ kind }: { kind: AnimationExportKind }) {
   const gifKey = useMemo(() => JSON.stringify({ range, scale, bg: background, loop, threshold }), [range, scale, background, loop, threshold]);
   useEffect(() => {
     if (kind !== 'gif' || !small || tooBig) return setMeasured(null);
+    const ctrl = new AbortController();
     const t = setTimeout(() => {
+      let job;
       try {
-        const r = exportGif(st, session.lookup, { range, scale, background, loop, alphaThreshold: threshold });
-        setMeasured({ bytes: r.bytes.length, quantized: r.quantized, rounded: r.delaysRounded, colors: r.colors });
+        job = prepareGif(st, session.lookup, { range, scale, background, loop, alphaThreshold: threshold });
       } catch {
-        setMeasured(null);
+        return setMeasured(null);
       }
+      encodeGifAsync(job.frames, job.options, ctrl.signal).then(
+        (r) => setMeasured({ bytes: r.bytes.length, quantized: r.quantized, rounded: r.delaysRounded, colors: r.colors }),
+        () => undefined,
+      );
     }, 250);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gifKey, kind, small, tooBig]);
 
@@ -82,9 +91,10 @@ export function AnimationExportDialog({ kind }: { kind: AnimationExportKind }) {
         if (!path) return;
         close();
         setBusy('Exportando GIF…');
-        const r = exportGif(st, session.lookup, { range, scale, background, loop, alphaThreshold: threshold });
+        const job = prepareGif(st, session.lookup, { range, scale, background, loop, alphaThreshold: threshold });
+        const r = await encodeGifAsync(job.frames, job.options);
         await api.file.write(path, r.bytes);
-        toast('success', `GIF exportado: ${r.frameCount} quadros, ${r.colors} cores, ${formatBytes(r.bytes.length)}.${r.quantized ? ' Cores reduzidas para caber em 256.' : ''}`, {
+        toast('success', `GIF exportado: ${job.frames.length} quadros, ${r.colors} cores, ${formatBytes(r.bytes.length)}.${r.quantized ? ' Cores reduzidas para caber em 256.' : ''}`, {
           label: 'Mostrar na pasta',
           run: () => void api.file.showInFolder(path),
         });

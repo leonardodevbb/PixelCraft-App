@@ -38,7 +38,7 @@ test('frames, playback and animation exports', async () => {
   await page.keyboard.press('.');
 
   // Edit the second frame's duration inline
-  await page.getByTestId('frame-cell').nth(1).getByRole('button', { name: /ms$/ }).click();
+  await page.getByTestId('frame-cell').nth(1).locator('.frame-duration').click();
   await page.getByLabel('Duração do quadro em milissegundos').fill('250');
   await page.getByLabel('Duração do quadro em milissegundos').press('Enter');
   expect((await state(page)).durations).toEqual([100, 250, 100]);

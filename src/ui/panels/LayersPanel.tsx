@@ -150,16 +150,14 @@ export function LayersPanel() {
           />
         </div>
       )}
-      <ul className="layer-list" role="listbox" aria-label="Camadas (do topo para a base)" data-testid="layer-list">
+      <ul className="layer-list" aria-label="Camadas (do topo para a base)" data-testid="layer-list">
         {rows.map(({ layer, depth }) => {
           const isActive = layer.id === activeId;
           const dropCls = drag?.over === layer.id ? ` drop-${drag.pos}` : '';
           return (
             <li
               key={layer.id}
-              role="option"
-              aria-selected={isActive}
-              tabIndex={isActive ? 0 : -1}
+              aria-current={isActive ? 'true' : undefined}
               className={`layer-row${isActive ? ' is-active' : ''}${layer.visible ? '' : ' is-hidden'}${dropCls}`}
               style={{ paddingLeft: 4 + depth * 14 }}
               draggable={renaming !== layer.id}
@@ -173,12 +171,6 @@ export function LayersPanel() {
               onDrop={(e) => onDrop(e, layer)}
               onClick={() => session.setActiveLayer(layer.id)}
               onDoubleClick={() => setRenaming(layer.id)}
-              onKeyDown={(e) => {
-                if (e.key === 'F2' || e.key === 'Enter') {
-                  e.preventDefault();
-                  setRenaming(layer.id);
-                }
-              }}
               data-testid="layer-row"
               data-layer-name={layer.name}
             >
@@ -231,9 +223,26 @@ export function LayersPanel() {
               {renaming === layer.id ? (
                 <LayerName layer={layer} onDone={() => setRenaming(null)} />
               ) : (
-                <span className="layer-name" title={layer.name}>
+                <button
+                  type="button"
+                  className="layer-name"
+                  title={layer.name}
+                  aria-pressed={isActive}
+                  aria-description={`${layer.type === 'group' ? 'Grupo' : 'Camada'}${layer.visible ? '' : ', oculta'}${layer.locked ? ', bloqueada' : ''}. F2 renomeia.`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    session.setActiveLayer(layer.id);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'F2') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setRenaming(layer.id);
+                    }
+                  }}
+                >
                   {layer.name}
-                </span>
+                </button>
               )}
               {!layer.exportable && (
                 <span className="layer-badge" data-tip="Não exportável" data-tip-hint="Camada de referência: fica fora das exportações.">

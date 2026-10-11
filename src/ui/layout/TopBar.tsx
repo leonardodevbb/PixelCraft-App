@@ -19,8 +19,8 @@ export function TopBar() {
 
   return (
     <header className="topbar">
-      <div className="brand" aria-label="PixelCraft">
-        <img src="./symbol.svg" alt="" width={22} height={22} />
+      <div className="brand">
+        <img src="./symbol.svg" alt="PixelCraft" width={22} height={22} />
       </div>
       <MenuBar menus={buildMenus()} />
       <div className="doc-title" data-testid="doc-title">

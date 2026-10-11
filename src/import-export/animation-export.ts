@@ -3,7 +3,7 @@ import type { ImageLookup } from '../layers/compose';
 import type { DocState, Frame } from '../project/model';
 import type { RGBA } from '../raster/color';
 import type { PixelBuffer } from '../raster/pixel-buffer';
-import { encodeGif, type GifEncodeReport } from './gif';
+import { encodeGif, type GifEncodeOptions, type GifEncodeReport, type GifFrameIn } from './gif';
 import { renderFrameForExport } from './export-image';
 import { encodePng } from './png';
 import { buildSpritesheet, frameTags, spritesheetJson, type SheetOptions } from './spritesheet';
@@ -35,16 +35,20 @@ export interface GifExportOptions {
   alphaThreshold: number;
 }
 
-/** Applies the document's ping-pong/reverse settings to the exported frame order. */
-export function exportGif(state: DocState, lookup: ImageLookup, o: GifExportOptions): GifEncodeReport & { frameCount: number } {
+/** Frames (in playback order, honouring ping-pong/reverse) and encoder options for a GIF export. */
+export function prepareGif(state: DocState, lookup: ImageLookup, o: GifExportOptions): { frames: GifFrameIn[]; options: GifEncodeOptions } {
   const frames = framesInRange(state, o.range);
   const images = render(state, lookup, frames, o.scale, o.background);
   const order = playbackOrder(frames.length, state.animation);
-  const report = encodeGif(
-    order.map((i) => ({ image: images[i]!, delayMs: frames[i]!.duration })),
-    { loop: o.loop, alphaThreshold: o.alphaThreshold, matte: o.background },
-  );
-  return { ...report, frameCount: order.length };
+  return {
+    frames: order.map((i) => ({ image: images[i]!, delayMs: frames[i]!.duration })),
+    options: { loop: o.loop, alphaThreshold: o.alphaThreshold, matte: o.background },
+  };
+}
+
+export function exportGif(state: DocState, lookup: ImageLookup, o: GifExportOptions): GifEncodeReport & { frameCount: number } {
+  const { frames, options } = prepareGif(state, lookup, o);
+  return { ...encodeGif(frames, options), frameCount: frames.length };
 }
 
 export interface SequenceFile {

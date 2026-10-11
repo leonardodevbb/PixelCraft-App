@@ -139,7 +139,7 @@ export function Timeline() {
           Quadro {activeIndex + 1}/{frames.length} · {(total / 1000).toFixed(2)} s
         </span>
       </div>
-      <ol className="frame-strip" ref={stripRef} aria-label="Quadros" role="listbox" aria-orientation="horizontal" data-testid="frame-strip">
+      <ol className="frame-strip" ref={stripRef} aria-label="Quadros" data-testid="frame-strip">
         {frames.map((f, i) => {
           const isActive = f.id === session.activeFrameId;
           const isPlaying = f.id === playFrameId;
@@ -147,9 +147,7 @@ export function Timeline() {
           return (
             <li
               key={f.id}
-              role="option"
-              aria-selected={isActive}
-              aria-label={`Quadro ${i + 1}, ${f.duration} ms${f.tag ? `, marcador ${f.tag}` : ''}`}
+              aria-current={isActive ? 'true' : undefined}
               className={`frame-cell${isActive ? ' is-active' : ''}${isPlaying ? ' is-playing' : ''}${drag?.over === i ? ' drop-here' : ''}`}
               draggable={editing !== f.id}
               onDragStart={(e) => {
@@ -176,7 +174,18 @@ export function Timeline() {
                   {f.tag}
                 </span>
               )}
-              <Thumb session={session} frame={f} />
+              <button
+                type="button"
+                className="frame-select"
+                aria-label={`Quadro ${i + 1}, ${f.duration} ms${f.tag ? `, marcador ${f.tag}` : ''}${linked ? ', célula vinculada' : ''}`}
+                aria-pressed={isActive}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  session.setActiveFrame(f.id);
+                }}
+              >
+                <Thumb session={session} frame={f} />
+              </button>
               <span className="frame-meta">
                 <span className="frame-index">{i + 1}</span>
                 {linked && (

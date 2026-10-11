@@ -12,8 +12,12 @@ export interface Launched {
 /** Starts the built app with isolated XDG directories. */
 export async function launch(opts: { args?: string[]; home?: string } = {}): Promise<Launched> {
   const home = opts.home ?? mkdtempSync(join(tmpdir(), 'pixelcraft-e2e-'));
-  const args = ['.', ...(process.getuid?.() === 0 ? ['--no-sandbox'] : []), ...(opts.args ?? [])];
+  // PIXELCRAFT_E2E_EXECUTABLE runs the suite against a packaged build
+  // (e.g. release/linux-unpacked/pixelcraft) instead of the dev checkout.
+  const packaged = process.env.PIXELCRAFT_E2E_EXECUTABLE;
+  const args = [...(packaged ? [] : ['.']), ...(process.getuid?.() === 0 ? ['--no-sandbox'] : []), ...(opts.args ?? [])];
   const app = await electron.launch({
+    ...(packaged ? { executablePath: packaged } : {}),
     args,
     env: {
       ...process.env,
