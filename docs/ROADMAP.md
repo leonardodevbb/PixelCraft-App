@@ -1,6 +1,13 @@
 # Roadmap
 
-## Situação da versão 0.1.0
+## Situação da versão 0.2.0
+
+A versão 0.2.0 trouxe os recursos do Aseprite mais usados por iniciantes:
+lápis pixel-perfect, tintas, transformação na tela com RotSprite, tags de
+animação, abrir e salvar `.aseprite`, modo indexado, ajustes de cor, APNG e
+SVG, pressão da caneta, fontes TTF e réguas.
+
+## Versão 0.1.0
 
 As seis fases do plano inicial foram implementadas:
 

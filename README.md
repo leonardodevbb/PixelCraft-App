@@ -7,7 +7,7 @@ pensado para quem está começando e rápido para quem já desenha sprites.
 Funciona offline, guarda os projetos apenas no seu computador e não tem
 telemetria.
 
-> Versão 0.1.0. O que está pronto, o que falta e as próximas ideias estão em
+> Versão 0.2.0. O que está pronto, o que falta e as próximas ideias estão em
 > [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Funcionalidades

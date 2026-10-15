@@ -44,6 +44,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.2.0" date="2026-10-15">
+      <description>
+        <p>Pixel-perfect pencil, shading ink, on-canvas transform with RotSprite, animation tags, opening and saving .aseprite files, indexed colour mode, colour adjustments, APNG and SVG export, pen pressure, TTF fonts and rulers.</p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-10-11">
       <description>
         <p>First release.</p>
