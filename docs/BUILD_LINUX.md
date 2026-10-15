@@ -143,7 +143,9 @@ No Flatpak esses caminhos ficam dentro de `~/.var/app/io.github.leonardodevbb.Pi
 1. Suba a versão em `package.json` (`npm version X.Y.Z --no-git-tag-version`),
    acrescente a entrada em `packaging/flatpak/*.metainfo.xml` e escreva as
    notas em `docs/releases/X.Y.Z.md`.
-2. Depois do merge no `main`, crie e envie a tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+2. Depois do merge no `main`, crie e envie a tag (`git tag vX.Y.Z && git push origin vX.Y.Z`)
+   ou rode o workflow `Release` à mão no `main` (Actions › Release › Run workflow),
+   que cria a tag sozinho.
 3. O workflow `Release` gera o `.deb`, o AppImage e o Flatpak, testa os três e
    publica o Release no GitHub com as notas e um `SHA256SUMS`. Ele recusa a tag
    se ela não bater com a versão do `package.json`.
