@@ -1,0 +1,41 @@
+name: Release
+
+# Publishing a version: push a tag like v0.2.0 on main. This builds the Linux
+# packages, smoke-tests them and creates the GitHub Release with the notes
+# from docs/releases/<version>.md and a SHA256SUMS file.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Tag must match package.json
+        run: |
+          v="$(node -p "require('./package.json').version")"
+          test "v$v" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME != package.json $v"; exit 1; }
+          test -f "docs/releases/$v.md" || { echo "Missing docs/releases/$v.md"; exit 1; }
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y xvfb desktop-file-utils appstream flatpak flatpak-builder
+      - run: npm run build
+      - run: npx electron-builder --linux deb AppImage
+      - run: bash scripts/build-flatpak.sh
+      - run: bash scripts/verify-packages.sh --smoke --flatpak-run
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          cd release
+          sha256sum *.deb *.AppImage *.flatpak > SHA256SUMS
+          gh release create "$GITHUB_REF_NAME" *.deb *.AppImage *.flatpak SHA256SUMS \
+            --title "PixelCraft $v" --notes-file "../docs/releases/$v.md" --verify-tag
