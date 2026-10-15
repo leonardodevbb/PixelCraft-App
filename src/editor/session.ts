@@ -14,6 +14,7 @@ import {
 import { PixelBuffer } from '../raster/pixel-buffer';
 import type { Rect } from '../raster/rect';
 import { unionRect } from '../raster/rect';
+import { snapBuffer } from '../palette/analysis';
 import type { Selection } from './selection';
 
 /** Editor context saved with each history entry so undo also restores focus. */
@@ -344,6 +345,8 @@ export class EditorSession {
       state = { ...state, cels: { ...state.cels, [key]: imageId } };
     }
     const patches: PixelPatch[] = [];
+    // Indexed mode: whatever a tool wrote lands on palette colours.
+    if (state.colorMode === 'indexed') for (const r of regions) snapBuffer(r.pixels, state.palette.colors);
     for (const { rect, pixels } of regions) {
       const before = img.extract(rect);
       img.paste(pixels, rect.x, rect.y);

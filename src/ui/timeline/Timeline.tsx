@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { EditorSession } from '../../editor/session';
-import { addFrame, deleteFrame, duplicateFrame, isCelLinked, moveFrame, setAnimation, setFps, setFrameDuration } from '../../editor/frame-ops';
+import { addFrame, isCelLinked, moveFrame, moveFrames, setAnimation, setFps, setFrameDuration } from '../../editor/frame-ops';
+import { tagRange } from '../../animation/tags';
+import { blue, green, parseHex, red } from '../../raster/color';
 import { LIMITS } from '../../project/limits';
 import type { Frame, LoopMode } from '../../project/model';
 import { attempt } from '../../renderer/actions/edit';
@@ -8,7 +10,7 @@ import { togglePlayback } from '../../renderer/actions/playback';
 import { commands } from '../../renderer/commands';
 import { useEditor } from '../../renderer/state/editor-store';
 import { usePrefs } from '../../renderer/state/preferences';
-import { IconButton, NumberField, Select } from '../controls';
+import { Checkbox, IconButton, NumberField, Select } from '../controls';
 import { frameImage } from './thumbs';
 
 function Thumb({ session, frame }: { session: EditorSession; frame: Frame }) {
@@ -60,6 +62,17 @@ function DurationEditor({ frame, onDone }: { frame: Frame; onDone: () => void })
   );
 }
 
+/** Black or white text, whichever reads better on the tag colour. */
+function readableOn(hex: string): string {
+  const c = parseHex(hex) ?? 0;
+  const lin = (v: number): number => {
+    const x = v / 255;
+    return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+  };
+  const l = 0.2126 * lin(red(c)) + 0.7152 * lin(green(c)) + 0.0722 * lin(blue(c));
+  return l > 0.18 ? '#1b1726' : '#ffffff';
+}
+
 const LOOP_OPTIONS: { value: LoopMode; label: string }[] = [
   { value: 'loop', label: 'Repetir' },
   { value: 'pingpong', label: 'Vai e volta' },
@@ -71,6 +84,8 @@ export function Timeline() {
   useEditor((s) => s.revision);
   const playing = useEditor((s) => s.playing);
   const playFrameId = useEditor((s) => s.playFrameId);
+  const frameSelection = useEditor((s) => s.frameSelection);
+  const playTagOnly = useEditor((s) => s.playTagOnly);
   const onion = usePrefs((s) => s.prefs.onion);
   const [editing, setEditing] = useState<string | null>(null);
   const [drag, setDrag] = useState<{ id: string; over: number | null } | null>(null);
@@ -107,8 +122,9 @@ export function Timeline() {
         <IconButton icon="last" label="Último quadro" shortcut={key('anim.last')} onClick={() => commands.execute('anim.last')} />
         <span className="divider" />
         <IconButton icon="plus" label="Novo quadro" shortcut={key('anim.newFrame')} onClick={() => attempt((s) => addFrame(s))} data-testid="frame-add" />
-        <IconButton icon="duplicate" label="Duplicar quadro" shortcut={key('anim.duplicateFrame')} onClick={() => attempt((s) => duplicateFrame(s))} data-testid="frame-duplicate" />
-        <IconButton icon="trash" label="Excluir quadro" shortcut={key('anim.deleteFrame')} disabled={frames.length < 2} onClick={() => attempt((s) => deleteFrame(s))} data-testid="frame-delete" />
+        <IconButton icon="duplicate" label="Duplicar quadro" hint="Com vários quadros selecionados, duplica todos." shortcut={key('anim.duplicateFrame')} onClick={() => commands.execute('anim.duplicateFrame')} data-testid="frame-duplicate" />
+        <IconButton icon="trash" label="Excluir quadro" hint="Com vários quadros selecionados, exclui todos." shortcut={key('anim.deleteFrame')} disabled={frames.length < 2} onClick={() => commands.execute('anim.deleteFrame')} data-testid="frame-delete" />
+        <IconButton icon="tag" label="Nova tag" hint="Dá nome aos quadros selecionados (Shift+clique escolhe um intervalo)." shortcut={key('anim.newTag')} onClick={() => commands.execute('anim.newTag')} data-testid="tag-new" />
         <span className="divider" />
         <NumberField
           label="FPS"
@@ -119,6 +135,9 @@ export function Timeline() {
           data-testid="anim-fps"
         />
         <Select<LoopMode> label="Modo" value={anim.loop} options={LOOP_OPTIONS} onChange={(loop) => attempt((s) => setAnimation(s, { loop }))} />
+        {st.tags.length > 0 && (
+          <Checkbox label="Só a tag atual" checked={playTagOnly} onChange={() => commands.execute('anim.playTagOnly')} hint="Ao reproduzir, repete apenas a tag do quadro atual, com a direção dela." />
+        )}
         <IconButton
           icon="loop"
           label={anim.direction === 'reverse' ? 'Direção: reversa' : 'Direção: normal'}
@@ -143,12 +162,28 @@ export function Timeline() {
         {frames.map((f, i) => {
           const isActive = f.id === session.activeFrameId;
           const isPlaying = f.id === playFrameId;
+          const isSelected = frameSelection.includes(f.id);
           const linked = isCelLinked(session, session.activeLayerId, f.id);
+          const here = st.tags.flatMap((t) => {
+            const r = tagRange(st, t);
+            return r && r.from <= i && i <= r.to ? [{ t, start: r.from === i, end: r.to === i }] : [];
+          });
+          const pick = (e: React.MouseEvent): void => {
+            if (e.shiftKey) {
+              const a = Math.min(activeIndex, i);
+              const b = Math.max(activeIndex, i);
+              useEditor.setState({ frameSelection: frames.slice(a, b + 1).map((x) => x.id) });
+            } else if (e.ctrlKey || e.metaKey) {
+              const cur = frameSelection.length ? frameSelection : [session.activeFrameId];
+              useEditor.setState({ frameSelection: cur.includes(f.id) ? cur.filter((x) => x !== f.id) : [...cur, f.id] });
+            } else useEditor.setState({ frameSelection: [] });
+            session.setActiveFrame(f.id);
+          };
           return (
             <li
               key={f.id}
               aria-current={isActive ? 'true' : undefined}
-              className={`frame-cell${isActive ? ' is-active' : ''}${isPlaying ? ' is-playing' : ''}${drag?.over === i ? ' drop-here' : ''}`}
+              className={`frame-cell${isActive ? ' is-active' : ''}${isSelected ? ' is-selected' : ''}${isPlaying ? ' is-playing' : ''}${drag?.over === i ? ' drop-here' : ''}`}
               draggable={editing !== f.id}
               onDragStart={(e) => {
                 e.dataTransfer.effectAllowed = 'move';
@@ -162,26 +197,49 @@ export function Timeline() {
               }}
               onDrop={(e) => {
                 e.preventDefault();
-                if (drag) attempt((s) => moveFrame(s, drag.id, i));
+                if (drag) {
+                  const block = frameSelection.includes(drag.id) && frameSelection.length > 1 ? frameSelection : null;
+                  if (block) {
+                    // Drop position counted without the moved block.
+                    const before = frames.slice(0, i).filter((x) => !block.includes(x.id)).length;
+                    attempt((s) => moveFrames(s, block, before));
+                  } else attempt((s) => moveFrame(s, drag.id, i));
+                }
                 setDrag(null);
               }}
               onDragEnd={() => setDrag(null)}
-              onClick={() => session.setActiveFrame(f.id)}
+              onClick={pick}
               data-testid="frame-cell"
             >
-              {f.tag && (
-                <span className="frame-tag" title={f.tag}>
-                  {f.tag}
-                </span>
-              )}
+              <span className="frame-tags">
+                {here.map(({ t, start, end }) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={`frame-tag-band${start ? ' is-start' : ''}${end ? ' is-end' : ''}`}
+                    style={{ '--tag': t.color, '--tag-text': readableOn(t.color) } as React.CSSProperties}
+                    tabIndex={start ? 0 : -1}
+                    aria-label={`Tag ${t.name}`}
+                    data-tip={`Tag "${t.name}"`}
+                    data-tip-hint="Clique para editar nome, quadros, direção e cor."
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      useEditor.getState().openDialog({ type: 'tag', tagId: t.id });
+                    }}
+                    data-testid={start ? 'tag-band-start' : undefined}
+                  >
+                    {start ? t.name : ''}
+                  </button>
+                ))}
+              </span>
               <button
                 type="button"
                 className="frame-select"
-                aria-label={`Quadro ${i + 1}, ${f.duration} ms${f.tag ? `, marcador ${f.tag}` : ''}${linked ? ', célula vinculada' : ''}`}
+                aria-label={`Quadro ${i + 1}, ${f.duration} ms${here.length ? `, tag ${here.map((h) => h.t.name).join(', ')}` : ''}${linked ? ', célula vinculada' : ''}`}
                 aria-pressed={isActive}
                 onClick={(e) => {
                   e.stopPropagation();
-                  session.setActiveFrame(f.id);
+                  pick(e);
                 }}
               >
                 <Thumb session={session} frame={f} />

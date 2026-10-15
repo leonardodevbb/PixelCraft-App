@@ -13,7 +13,7 @@ import {
   reverseFrames,
   setFps,
   setFrameDuration,
-  setFrameTag,
+  addTag,
   unlinkCel,
 } from '../../src/editor/frame-ops';
 import { Player, playbackOrder, cycleDuration } from '../../src/animation/playback';
@@ -68,8 +68,8 @@ describe('frame operations', () => {
     expect(s.state.frames.every((f) => f.duration === 50)).toBe(true);
     setFrameDuration(s, [s.activeFrameId], 5);
     expect(s.state.frames.at(-1)!.duration).toBe(10);
-    setFrameTag(s, s.state.frames[0]!.id, 'andar');
-    expect(s.state.frames[0]!.tag).toBe('andar');
+    const tag = addTag(s, 0, 1, { name: 'andar' });
+    expect(s.state.tags.find((t) => t.id === tag)!.name).toBe('andar');
     const ids = s.state.frames.map((f) => f.id);
     reverseFrames(s);
     expect(s.state.frames.map((f) => f.id)).toEqual([...ids].reverse());
@@ -162,10 +162,11 @@ describe('spritesheet', () => {
     expect(image.width).toBe(10);
     expect(image.get(6, 1)).toBe(BLUE);
     const frames = [
-      { id: 'a', duration: 100, tag: 'idle' },
+      { id: 'a', duration: 100 },
       { id: 'b', duration: 120 },
     ];
-    const json = JSON.parse(spritesheetJson({ imageName: 'x.png', baseName: 'x', frames, geometry, scale: 1, tags: frameTags(frames), appVersion: 'test' }));
+    const tags = frameTags({ frames, tags: [{ id: 'T', name: 'idle', from: 'a', to: 'b', color: '#000000', direction: 'forward', repeat: 0 }] }).map(({ name, from, to, direction }) => ({ name, from, to, direction }));
+    const json = JSON.parse(spritesheetJson({ imageName: 'x.png', baseName: 'x', frames, geometry, scale: 1, tags, appVersion: 'test' }));
     expect(json.frames[1].frame).toEqual({ x: 5, y: 0, w: 5, h: 3 });
     expect(json.frames[1].duration).toBe(120);
     expect(json.meta.frameTags).toEqual([{ name: 'idle', from: 0, to: 1, direction: 'forward' }]);

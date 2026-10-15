@@ -51,6 +51,12 @@ export interface Overlay {
   lasso: Point[] | null;
   /** Offset applied to the selection outline while it is being moved. */
   selectionOffset: Point | null;
+  /** Ellipse being dragged by the elliptical selection tool. */
+  ellipse: Rect | null;
+  /** Curve control points (start, c1, c2, end) shown as handles. */
+  handles: Point[] | null;
+  /** Corners of a piece being transformed, drawn as a box with handles. */
+  transformBox: Point[] | null;
 }
 
 /**
@@ -80,7 +86,7 @@ export class CanvasRenderer {
   session: EditorSession | null = null;
   transform: ViewTransform = { zoom: 8, offsetX: 0, offsetY: 0 };
   settings: RenderSettings;
-  overlay: Overlay = { cursorPixels: null, cursorColor: '#ffffff', selection: null, floating: null, marquee: null, lasso: null, selectionOffset: null };
+  overlay: Overlay = { cursorPixels: null, cursorColor: '#ffffff', selection: null, floating: null, marquee: null, lasso: null, selectionOffset: null, ellipse: null, handles: null, transformBox: null };
   /** Renders a frame other than the active one (playback). */
   frameOverride: string | null = null;
 
@@ -325,7 +331,69 @@ export class CanvasRenderer {
     }
 
     this.drawSelection(ctx);
+    this.drawHandles(ctx);
+    this.drawTransformBox(ctx);
     this.drawCursor(ctx);
+  }
+
+  /** Box around a piece being transformed, with scale handles on corners and edges. */
+  private drawTransformBox(ctx: CanvasRenderingContext2D): void {
+    const box = this.overlay.transformBox;
+    if (!box || box.length !== 4) return;
+    const { zoom, offsetX, offsetY } = this.transform;
+    const pts = box.map((p) => [offsetX + p.x * zoom, offsetY + p.y * zoom] as const);
+    ctx.save();
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    ctx.stroke();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+    ctx.setLineDash([]);
+    const handles = [...pts, ...pts.map((p, i) => {
+      const q = pts[(i + 1) % 4]!;
+      return [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2] as const;
+    })];
+    for (const [x, y] of handles) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(Math.round(x) - 4, Math.round(y) - 4, 8, 8);
+      ctx.strokeStyle = '#ff7a3d';
+      ctx.strokeRect(Math.round(x) - 4.5, Math.round(y) - 4.5, 9, 9);
+    }
+    ctx.restore();
+  }
+
+  /** Curve handles: lines from each end point to its control point, plus small squares. */
+  private drawHandles(ctx: CanvasRenderingContext2D): void {
+    const h = this.overlay.handles;
+    if (!h || h.length !== 4) return;
+    const { zoom, offsetX, offsetY } = this.transform;
+    const at = (p: Point): [number, number] => [offsetX + (p.x + 0.5) * zoom, offsetY + (p.y + 0.5) * zoom];
+    ctx.save();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(46, 196, 182, 0.9)';
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    for (const [a, b] of [
+      [h[0]!, h[1]!],
+      [h[3]!, h[2]!],
+    ] as const) {
+      ctx.moveTo(...at(a));
+      ctx.lineTo(...at(b));
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (const p of h) {
+      const [x, y] = at(p);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(Math.round(x) - 3, Math.round(y) - 3, 7, 7);
+      ctx.strokeStyle = '#1b1726';
+      ctx.strokeRect(Math.round(x) - 3.5, Math.round(y) - 3.5, 8, 8);
+    }
+    ctx.restore();
   }
 
   private drawGrids(ctx: CanvasRenderingContext2D, dw: number, dh: number, cw: number, ch: number): void {
@@ -411,7 +479,7 @@ export class CanvasRenderer {
 
   /** True when marching ants need animating. */
   get hasAnts(): boolean {
-    return !!(this.shownSelection || this.overlay.marquee || this.overlay.lasso);
+    return !!(this.shownSelection || this.overlay.marquee || this.overlay.lasso || this.overlay.ellipse);
   }
 
   private drawSelection(ctx: CanvasRenderingContext2D): void {
@@ -451,7 +519,14 @@ export class CanvasRenderer {
       });
       path.closePath();
     }
-    if (!sel && !m && !lasso) return;
+    const el = this.overlay.ellipse;
+    if (el) {
+      const rx = (el.w * zoom) / 2;
+      const ry = (el.h * zoom) / 2;
+      path.moveTo(offsetX + el.x * zoom + 2 * rx, offsetY + el.y * zoom + ry);
+      path.ellipse(offsetX + el.x * zoom + rx, offsetY + el.y * zoom + ry, rx, ry, 0, 0, Math.PI * 2);
+    }
+    if (!sel && !m && !lasso && !el) return;
     ctx.save();
     ctx.lineWidth = 1;
     ctx.strokeStyle = '#000';

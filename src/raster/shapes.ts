@@ -147,6 +147,31 @@ export function ellipseFilled(x0: number, y0: number, x1: number, y1: number, pl
   for (const [y, [l, r]] of spans) for (let x = l; x <= r; x++) plot(x, y);
 }
 
+/**
+ * Cubic Bézier from a to b with control points c1 and c2. Samples are taken
+ * densely enough that consecutive points are at most one pixel apart, then
+ * joined with Bresenham lines, so the curve has no gaps or repeated pixels
+ * between samples.
+ */
+export function cubicBezier(a: Point, c1: Point, c2: Point, b: Point, plot: Plot): void {
+  const len = Math.hypot(c1.x - a.x, c1.y - a.y) + Math.hypot(c2.x - c1.x, c2.y - c1.y) + Math.hypot(b.x - c2.x, b.y - c2.y);
+  const steps = Math.max(1, Math.ceil(len * 2));
+  const out = dedupe(plot);
+  let px = a.x;
+  let py = a.y;
+  out(px, py);
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    const u = 1 - t;
+    const x = Math.round(u * u * u * a.x + 3 * u * u * t * c1.x + 3 * u * t * t * c2.x + t * t * t * b.x);
+    const y = Math.round(u * u * u * a.y + 3 * u * u * t * c1.y + 3 * u * t * t * c2.y + t * t * t * b.y);
+    if (x === px && y === py) continue;
+    line(px, py, x, y, out);
+    px = x;
+    py = y;
+  }
+}
+
 export type BrushShape = 'square' | 'circle';
 
 /**

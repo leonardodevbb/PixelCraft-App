@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react';
+import { indexedColor } from '../../palette/analysis';
+import { Rulers } from './Rulers';
 import { getTool, type ColorSlot, type Tool, type ToolHost, type ToolId, type ToolPointer } from '../../editor/tools';
 import { sampleColor } from '../../editor/tools/eyedropper';
+import { transformTool } from '../../editor/tools/transform-tool';
 import { brushFootprint } from '../../raster/shapes';
 import { toHex } from '../../raster/color';
 import { CanvasRenderer, type RenderSettings } from '../../renderer-engine/canvas-renderer';
@@ -14,8 +17,12 @@ function isTyping(t: EventTarget | null): boolean {
   return t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement || (t instanceof HTMLElement && t.isContentEditable);
 }
 
-const PAINT_TOOLS: ToolId[] = ['pencil', 'brush', 'eraser', 'line', 'rect', 'rect-filled', 'ellipse', 'ellipse-filled'];
-const SIZED_TOOLS: ToolId[] = ['pencil', 'brush', 'eraser', 'line', 'rect', 'ellipse'];
+const PAINT_TOOLS: ToolId[] = ['pencil', 'brush', 'eraser', 'line', 'curve', 'rect', 'rect-filled', 'ellipse', 'ellipse-filled', 'contour', 'spray', 'blur', 'jumble'];
+const SIZED_TOOLS: ToolId[] = ['pencil', 'brush', 'eraser', 'line', 'curve', 'rect', 'ellipse', 'blur', 'jumble'];
+/** Tools whose tip follows a custom brush when one is set. */
+const BRUSH_TOOLS: ToolId[] = ['pencil', 'brush', 'eraser', 'line', 'curve', 'rect', 'ellipse'];
+/** Two-point tools keep Alt for "from the centre" instead of the eyedropper. */
+const ALT_IS_MODIFIER: ToolId[] = ['line', 'curve', 'rect', 'rect-filled', 'ellipse', 'ellipse-filled'];
 
 function renderSettings(p: Preferences): RenderSettings {
   return {
@@ -42,7 +49,12 @@ function makeHost(r: CanvasRenderer): ToolHost {
   return {
     session: st.session!,
     options: st.options,
-    color: (slot: ColorSlot) => (slot === 'primary' ? useEditor.getState().primary : useEditor.getState().secondary),
+    color: (slot: ColorSlot) => {
+      const e = useEditor.getState();
+      const c = slot === 'primary' ? e.primary : e.secondary;
+      // Indexed mode: tools paint (and preview) with the nearest palette colour.
+      return e.session?.state.colorMode === 'indexed' ? indexedColor(c, e.session.state.palette.colors) : c;
+    },
     setColor: (slot, c) => useEditor.getState().setColor(slot, c),
     notify: (m) => useEditor.getState().toast('error', m),
     symmetryActive: st.symmetryOn,
@@ -50,10 +62,21 @@ function makeHost(r: CanvasRenderer): ToolHost {
       if (p.marquee !== undefined) r.overlay.marquee = p.marquee;
       if (p.lasso !== undefined) r.overlay.lasso = p.lasso;
       if (p.selectionOffset !== undefined) r.overlay.selectionOffset = p.selectionOffset;
+      if (p.ellipse !== undefined) r.overlay.ellipse = p.ellipse;
+      if (p.handles !== undefined) r.overlay.handles = p.handles;
+      if (p.transformBox !== undefined) r.overlay.transformBox = p.transformBox;
       r.request();
     },
     requestText: (at) => useEditor.getState().openDialog({ type: 'text', x: at.x, y: at.y }),
+    zoom: st.transform.zoom,
   };
+}
+
+let currentRenderer: CanvasRenderer | null = null;
+
+/** A tool host bound to the visible canvas, for UI outside it (options bar, commands). */
+export function canvasToolHost(): ToolHost | null {
+  return currentRenderer && useEditor.getState().session ? makeHost(currentRenderer) : null;
 }
 
 interface Interaction {
@@ -73,12 +96,14 @@ export function CanvasView() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<CanvasRenderer | null>(null);
   const session = useEditor((s) => s.session);
+  const showRulers = usePrefs((s) => s.prefs.showRulers);
 
   // Renderer lifetime
   useEffect(() => {
     const canvas = canvasRef.current!;
     const r = new CanvasRenderer(canvas, renderSettings(usePrefs.getState().prefs));
     rendererRef.current = r;
+    currentRenderer = r;
     r.transform = useEditor.getState().transform;
     const unsubEditor = useEditor.subscribe((s, prev) => {
       if (s.transform !== prev.transform) {
@@ -114,6 +139,7 @@ export function CanvasView() {
       unsubPrefs();
       ro.disconnect();
       r.dispose();
+      if (currentRenderer === r) currentRenderer = null;
     };
   }, []);
 
@@ -144,6 +170,7 @@ export function CanvasView() {
     let spaceUsed = false;
     let altDown = false;
     let lastHover: { x: number; y: number } | null = null;
+    let lastHoverF = { x: 0, y: 0 };
 
     const local = (e: { clientX: number; clientY: number }) => {
       const rect = canvas.getBoundingClientRect();
@@ -153,18 +180,23 @@ export function CanvasView() {
     const toPointer = (e: PointerEvent, slot: ColorSlot): ToolPointer => {
       const { sx, sy } = local(e);
       const d = screenToDoc(useEditor.getState().transform, sx, sy);
-      return { ...d, slot, shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey, alt: e.altKey };
+      return { ...d, slot, shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey, alt: e.altKey, ...(e.pointerType === 'pen' ? { pressure: e.pressure } : {}) };
     };
 
     const effectiveTool = (): ToolId => {
       const { tool } = useEditor.getState();
-      if (altDown && PAINT_TOOLS.includes(tool) && !['line', 'rect', 'rect-filled', 'ellipse', 'ellipse-filled'].includes(tool)) return 'eyedropper';
+      if (altDown && PAINT_TOOLS.includes(tool) && !ALT_IS_MODIFIER.includes(tool)) return 'eyedropper';
       return tool;
     };
 
     const updateCursor = () => {
       const t = effectiveTool();
-      canvas.style.cursor = active?.kind === 'pan' ? 'grabbing' : spaceDown || t === 'pan' ? 'grab' : getTool(t)?.cursor ?? 'crosshair';
+      let toolCursor = getTool(t)?.cursor ?? 'crosshair';
+      if (t === 'transform' && lastHover && !active) {
+        const kind = transformTool.hit({ x: lastHoverF.x, y: lastHoverF.y }, useEditor.getState().transform.zoom);
+        toolCursor = kind === 'scale-handle' ? 'nwse-resize' : kind === 'rotate' ? 'alias' : kind === 'move' ? 'move' : 'default';
+      }
+      canvas.style.cursor = active?.kind === 'pan' ? 'grabbing' : spaceDown || t === 'pan' ? 'grab' : toolCursor;
     };
 
     const updateHover = (x: number, y: number) => {
@@ -176,7 +208,9 @@ export function CanvasView() {
       const t = effectiveTool();
       if (inside && PAINT_TOOLS.includes(t)) {
         const size = SIZED_TOOLS.includes(t) ? st.options.size : 1;
-        r.overlay.cursorPixels = brushFootprint(size, t === 'brush' ? 'circle' : st.options.shape).map((o) => ({ x: x + o.x, y: y + o.y }));
+        const custom = BRUSH_TOOLS.includes(t) ? st.options.customBrush : null;
+        const fp = custom ? custom.pixels : t === 'spray' ? brushFootprint(Math.max(5, st.options.size), 'circle') : brushFootprint(size, t === 'brush' ? 'circle' : st.options.shape);
+        r.overlay.cursorPixels = fp.map((o) => ({ x: x + o.x, y: y + o.y }));
         r.overlay.cursorColor = t === 'eraser' ? '#ffffff' : toHex(st.primary).slice(0, 7);
       } else r.overlay.cursorPixels = null;
       r.request();
@@ -224,7 +258,9 @@ export function CanvasView() {
         const events = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [];
         for (const ce of events.length ? events : [e]) active.tool!.onMove(toPointer(ce, active.slot), active.host!);
       }
+      lastHoverF = { x: p.fx, y: p.fy };
       updateHover(p.x, p.y);
+      if (!active && useEditor.getState().tool === 'transform') updateCursor();
     };
 
     const finish = (e: PointerEvent) => {
@@ -288,6 +324,9 @@ export function CanvasView() {
       if (e.key === 'Escape' && active?.kind === 'tool') {
         active.tool!.cancel(active.host!);
         active = null;
+      } else if (e.key === 'Escape' && !active && useEditor.getState().session && !isTyping(e.target)) {
+        // A curve waiting for its control points is cancelled too.
+        getTool(useEditor.getState().tool)?.deactivate?.(makeHost(rendererRef.current!));
       }
     };
     const onKeyUp = (e: KeyboardEvent) => {
@@ -310,6 +349,11 @@ export function CanvasView() {
       updateCursor();
     };
     const unsubTool = useEditor.subscribe((s, prev) => {
+      // Tools that keep state between gestures (the curve) drop it when left.
+      if (s.tool !== prev.tool && s.session) {
+        getTool(prev.tool)?.deactivate?.(makeHost(rendererRef.current!));
+        getTool(s.tool)?.activate?.(makeHost(rendererRef.current!));
+      }
       if (s.tool !== prev.tool || s.options !== prev.options || s.primary !== prev.primary) {
         updateCursor();
         if (lastHover) updateHover(lastHover.x, lastHover.y);
@@ -323,6 +367,16 @@ export function CanvasView() {
     canvas.addEventListener('pointerleave', onLeave);
     canvas.addEventListener('wheel', onWheel, { passive: false });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    // Enter applies a pending transform before it can reach the global shortcuts (play).
+    const onEnterCapture = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' || isTyping(e.target) || useEditor.getState().dialog) return;
+      const t = getTool(useEditor.getState().tool);
+      if (!t?.isPending?.() || !t.apply) return;
+      e.preventDefault();
+      e.stopPropagation();
+      t.apply(makeHost(rendererRef.current!));
+    };
+    window.addEventListener('keydown', onEnterCapture, true);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('blur', onBlur);
@@ -334,6 +388,7 @@ export function CanvasView() {
       canvas.removeEventListener('pointercancel', onCancel);
       canvas.removeEventListener('pointerleave', onLeave);
       canvas.removeEventListener('wheel', onWheel);
+      window.removeEventListener('keydown', onEnterCapture, true);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
@@ -350,6 +405,7 @@ export function CanvasView() {
         aria-label="Área de desenho"
         data-testid="editor-canvas"
       />
+      {showRulers && <Rulers canvasRef={canvasRef} />}
     </div>
   );
 }

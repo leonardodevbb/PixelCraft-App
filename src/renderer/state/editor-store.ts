@@ -1,3 +1,4 @@
+import type { AdjustKind } from '../../ui/dialogs/AdjustDialog';
 import { create } from 'zustand';
 import type { EditorSession } from '../../editor/session';
 import { DEFAULT_TOOL_OPTIONS, type ColorSlot, type ToolId, type ToolOptions } from '../../editor/tools';
@@ -20,6 +21,7 @@ export type DialogState =
   | { type: 'resize-content' }
   | { type: 'document-properties' }
   | { type: 'export-gif' }
+  | { type: 'export-apng' }
   | { type: 'export-spritesheet' }
   | { type: 'export-sequence' }
   | { type: 'import-image'; file: { name: string; data: Uint8Array } }
@@ -35,8 +37,10 @@ export type DialogState =
   | { type: 'tileset' }
   | { type: 'offset' }
   | { type: 'replace-color' }
+  | { type: 'adjust'; kind: AdjustKind }
   | { type: 'scale-selection' }
   | { type: 'history' }
+  | { type: 'tag'; tagId?: string; from?: number; to?: number }
   | {
       type: 'prompt';
       title: string;
@@ -81,6 +85,10 @@ interface EditorStore {
   playing: boolean;
   /** Frame shown while the animation plays (the edited frame stays active). */
   playFrameId: string | null;
+  /** Play only the tag under the active frame (when there is one). */
+  playTagOnly: boolean;
+  /** Frames picked on the timeline with Shift/Ctrl, besides the active one. */
+  frameSelection: string[];
   dialog: DialogState | null;
   toasts: Toast[];
   busy: string | null;
@@ -120,6 +128,8 @@ export const useEditor = create<EditorStore>((set, get) => ({
   symmetryOn: true,
   playing: false,
   playFrameId: null,
+  playTagOnly: true,
+  frameSelection: [],
   dialog: null,
   toasts: [],
   busy: null,
@@ -131,7 +141,7 @@ export const useEditor = create<EditorStore>((set, get) => ({
           if (e.type !== 'draft') set((st) => ({ revision: st.revision + 1 }));
         })
       : null;
-    set((st) => ({ session: s, revision: st.revision + 1, hover: null, playing: false, playFrameId: null }));
+    set((st) => ({ session: s, revision: st.revision + 1, hover: null, playing: false, playFrameId: null, frameSelection: [] }));
   },
   bump: () => set((st) => ({ revision: st.revision + 1 })),
   setTool(t) {
@@ -156,6 +166,18 @@ export const useEditor = create<EditorStore>((set, get) => ({
   dismissToast: (id) => set((st) => ({ toasts: st.toasts.filter((t) => t.id !== id) })),
   setBusy: (busy) => set({ busy }),
 }));
+
+/**
+ * Frames the timeline actions apply to: the Shift/Ctrl selection when it has
+ * frames that still exist, otherwise the active frame.
+ */
+export function selectedFrameIds(): string[] {
+  const { session, frameSelection } = useEditor.getState();
+  if (!session) return [];
+  const alive = new Set(session.state.frames.map((f) => f.id));
+  const sel = frameSelection.filter((id) => alive.has(id));
+  return sel.length ? session.state.frames.filter((f) => sel.includes(f.id)).map((f) => f.id) : [session.activeFrameId];
+}
 
 /** Asks the user to confirm; resolves with the chosen button. */
 export function confirmDialog(opts: Omit<Extract<DialogState, { type: 'confirm' }>, 'type' | 'resolve'>): Promise<'confirm' | 'alt' | 'cancel'> {

@@ -32,7 +32,16 @@ export const layerSchema: z.ZodType<LayerJson> = z.lazy(() =>
 export const frameSchema = z.object({
   id,
   duration: z.number().int().min(LIMITS.minFrameDuration).max(LIMITS.maxFrameDuration),
-  tag: z.string().max(LIMITS.maxNameLength).optional(),
+});
+
+export const tagSchema = z.object({
+  id,
+  name: name.min(1),
+  from: id,
+  to: id,
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  direction: z.enum(['forward', 'reverse', 'pingpong']),
+  repeat: z.number().int().min(0).max(1000),
 });
 
 export const documentSchema = z.object({
@@ -42,6 +51,7 @@ export const documentSchema = z.object({
   height: dim,
   layers: z.array(layerSchema).min(1),
   frames: z.array(frameSchema).min(1).max(LIMITS.maxFrames),
+  tags: z.array(tagSchema).max(LIMITS.maxFrames),
   cels: z.record(z.string().max(140), id),
   palette: z.object({ id, name, colors: z.array(hexColor).max(LIMITS.maxPaletteColors) }),
   animation: z.object({
@@ -62,6 +72,7 @@ export const documentSchema = z.object({
     axisX: z.number().min(0).max(LIMITS.maxDimension),
     axisY: z.number().min(0).max(LIMITS.maxDimension),
   }),
+  colorMode: z.enum(['rgb', 'indexed']).optional(),
 });
 
 export const imageEntrySchema = z.object({
@@ -70,7 +81,7 @@ export const imageEntrySchema = z.object({
   height: dim,
 });
 
-export const CURRENT_FORMAT_VERSION = 1;
+export const CURRENT_FORMAT_VERSION = 2;
 
 export const manifestSchema = z.object({
   format: z.literal('pixelcraft'),

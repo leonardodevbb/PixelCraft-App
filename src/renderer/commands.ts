@@ -3,28 +3,36 @@ import type { ToolId } from '../editor/tools';
 import { api } from './api';
 import { useEditor } from './state/editor-store';
 import { usePrefs } from './state/preferences';
-import { closeProject, openProjectDialog, save, saveAs } from './actions/documents';
+import { closeProject, exportAseprite, openProjectDialog, save, saveAs } from './actions/documents';
+import { exportSvg } from './actions/export';
+import { setColorMode } from '../editor/color-mode';
+import { addRamp, paletteFromDrawing, PALETTE_SORT_LABELS, removeUnusedColors, sortPalette, type PaletteSort } from '../editor/palette-ops';
 import { moveSelected } from '../editor/selection-ops';
 import { centerView, fitView, zoomStep, zoomTo } from './actions/view';
 import { attempt, copy, cut, deleteSelection, nudge, paste, selectAll } from './actions/edit';
-import { confirmDialog, promptDialog } from './state/editor-store';
+import { confirmDialog, promptDialog, selectedFrameIds } from './state/editor-store';
+import { tagsAt } from '../animation/tags';
 import { stopPlayback, togglePlayback } from './actions/playback';
 import {
   addFrame,
-  deleteFrame,
   duplicateFrame,
   goToFrame,
   isCelLinked,
   linkCelToPrevious,
   moveFrame,
-  reverseFrames,
   setAnimation,
   setFrameDuration,
-  setFrameTag,
+  copyFrames,
+  deleteFrames,
+  duplicateFrames,
+  pasteFrames,
+  reverseFrameRange,
+  type FrameClip,
   unlinkCel,
 } from '../editor/frame-ops';
-import { invertSelection, opaqueSelection } from '../editor/selection';
-import { flipSelectedH, flipSelectedV, rotateSelected } from '../editor/selection-ops';
+import { borderSelection, clipSelection, colorSelection, contractSelection, expandSelection, invertSelection, opaqueSelection } from '../editor/selection';
+import { PixelBuffer } from '../raster/pixel-buffer';
+import { brushFromSelection, flipSelectedH, flipSelectedV, rotateSelected } from '../editor/selection-ops';
 import { EditorError, type EditorSession } from '../editor/session';
 import {
   centerContent,
@@ -56,6 +64,9 @@ import { exportPaletteFile, importPaletteFile } from '../ui/panels/PalettePanel'
 import { importImageAsLayer, importSpritesheet } from './actions/import';
 
 export const commands = new CommandRegistry();
+
+/** Frames copied with "Copiar quadros" (kept across documents of this window). */
+let frameClipboard: FrameClip | null = null;
 
 const ed = () => useEditor.getState();
 const hasDoc = (): boolean => !!ed().session;
@@ -104,10 +115,17 @@ export const TOOL_COMMANDS: { tool: ToolId; label: string; keys: string[]; hint:
   { tool: 'select-lasso', label: 'Laço', keys: ['Q'], hint: 'Desenhe o contorno à mão livre. Shift adiciona, Alt subtrai.' },
   { tool: 'magic-wand', label: 'Varinha mágica', keys: ['W'], hint: 'Seleciona cores parecidas. Shift adiciona, Alt subtrai.' },
   { tool: 'move', label: 'Mover', keys: ['V'], hint: 'Move a seleção (ou a camada). Alt duplica, Ctrl move só o contorno. Setas: 1 px.' },
-  { tool: 'text', label: 'Texto', keys: ['T'], hint: 'Clique onde o texto começa. Fonte bitmap PixelCraft Sans 5×7 com acentos.' },
+  { tool: 'text', label: 'Texto', keys: ['T'], hint: 'Clique onde o texto começa. Use a fonte de pixel 5×7 ou escolha outra fonte (até TTF) no painel de texto.' },
   { tool: 'gradient', label: 'Degradê', keys: ['Shift+G'], hint: 'Arraste da cor primária para a secundária. Preenche a seleção ou a camada. Shift trava o ângulo.' },
   { tool: 'eyedropper', label: 'Conta-gotas', keys: ['I'], hint: 'Clique para pegar a cor. Alt com outra ferramenta também funciona.' },
   { tool: 'pan', label: 'Mão (mover vista)', keys: ['H'], hint: 'Arraste para mover a vista. Espaço também funciona.' },
+  { tool: 'spray', label: 'Spray', keys: ['A'], hint: 'Borrifa pixels soltos ao redor do cursor. O tamanho define o diâmetro.' },
+  { tool: 'contour', label: 'Contorno preenchido', keys: ['Shift+Q'], hint: 'Desenhe o contorno à mão livre; ao soltar, a área é preenchida.' },
+  { tool: 'curve', label: 'Curva', keys: ['Shift+L'], hint: 'Arraste a linha, depois arraste duas vezes para dobrar a curva. Esc cancela.' },
+  { tool: 'blur', label: 'Desfocar', keys: ['R'], hint: 'Suaviza os pixels sob o pincel. Passe de novo para desfocar mais.' },
+  { tool: 'jumble', label: 'Embaralhar', keys: ['J'], hint: 'Troca pixels de lugar com os vizinhos, bom para texturas como grama e areia.' },
+  { tool: 'transform', label: 'Transformar', keys: ['Ctrl+T'], hint: 'Arraste dentro para mover, nas alças para redimensionar e perto dos cantos para girar. Enter aplica, Esc cancela.' },
+  { tool: 'select-ellipse', label: 'Seleção elíptica', keys: ['Shift+M'], hint: 'Shift adiciona, Alt subtrai, Shift+Alt intersecta.' },
 ];
 
 export function registerCommands(): void {
@@ -121,7 +139,10 @@ export function registerCommands(): void {
     { id: 'file.importLayer', label: 'Importar imagem como camada…', category: 'Arquivo', keys: ['Ctrl+Shift+O'], run: () => void importImageAsLayer(), enabled: hasDoc },
     { id: 'file.importSheet', label: 'Importar spritesheet…', category: 'Arquivo', run: () => void importSpritesheet() },
     { id: 'file.exportGif', label: 'Exportar GIF animado…', category: 'Arquivo', keys: ['Ctrl+Alt+G'], run: () => ed().openDialog({ type: 'export-gif' }), enabled: hasDoc },
+    { id: 'file.exportApng', label: 'Exportar PNG animado (APNG)…', category: 'Arquivo', run: () => ed().openDialog({ type: 'export-apng' }), enabled: hasDoc },
+    { id: 'file.exportSvg', label: 'Exportar quadro como SVG…', category: 'Arquivo', run: () => void exportSvg(), enabled: hasDoc },
     { id: 'file.exportSheet', label: 'Exportar spritesheet…', category: 'Arquivo', keys: ['Ctrl+Alt+S'], run: () => ed().openDialog({ type: 'export-spritesheet' }), enabled: hasDoc },
+    { id: 'file.exportAseprite', label: 'Exportar para o Aseprite (.aseprite)…', category: 'Arquivo', run: () => void exportAseprite(), enabled: hasDoc },
     { id: 'file.exportTileset', label: 'Exportar tileset…', category: 'Arquivo', run: () => ed().openDialog({ type: 'tileset' }), enabled: hasDoc },
     { id: 'file.exportSequence', label: 'Exportar sequência de PNG…', category: 'Arquivo', run: () => ed().openDialog({ type: 'export-sequence' }), enabled: hasDoc },
     { id: 'file.recent', label: 'Abrir recentes…', category: 'Arquivo', keys: ['Ctrl+Shift+R'], run: () => ed().openDialog({ type: 'recent' }) },
@@ -199,7 +220,68 @@ export function registerCommands(): void {
     { id: 'select.rotateCw', label: 'Girar seleção 90° horário', category: 'Seleção', run: () => attempt((s) => rotateSelected(s, 90)), enabled: hasDoc },
     { id: 'select.rotateCcw', label: 'Girar seleção 90° anti-horário', category: 'Seleção', run: () => attempt((s) => rotateSelected(s, 270)), enabled: hasDoc },
     { id: 'select.rotate180', label: 'Girar seleção 180°', category: 'Seleção', run: () => attempt((s) => rotateSelected(s, 180)), enabled: hasDoc },
-    { id: 'select.scale', label: 'Redimensionar seleção…', category: 'Seleção', keys: ['Ctrl+T'], run: () => ed().openDialog({ type: 'scale-selection' }), enabled: hasDoc },
+    {
+      id: 'brush.fromSelection',
+      label: 'Criar pincel a partir da seleção',
+      category: 'Ferramentas',
+      keys: ['Ctrl+B'],
+      run: () =>
+        attempt((s) => {
+          const brush = brushFromSelection(s);
+          ed().setOptions({ customBrush: brush });
+          const st = ed();
+          if (!['pencil', 'brush', 'eraser', 'line', 'rect', 'ellipse', 'curve'].includes(st.tool)) st.setTool('pencil');
+          st.toast('success', 'Pincel criado. Use "Pincel padrão" para voltar à ponta normal.');
+        }),
+      enabled: hasSel,
+    },
+    {
+      id: 'brush.reset',
+      label: 'Pincel padrão',
+      category: 'Ferramentas',
+      keys: ['Ctrl+Shift+B'],
+      run: () => ed().setOptions({ customBrush: null }),
+      enabled: () => !!ed().options.customBrush,
+    },
+    ...(
+      [
+        ['expand', 'Expandir seleção…', 'Expandir em quantos pixels?', expandSelection],
+        ['contract', 'Contrair seleção…', 'Contrair em quantos pixels?', contractSelection],
+        ['border', 'Borda da seleção…', 'Largura da borda em pixels', borderSelection],
+      ] as const
+    ).map(
+      ([key, label, question, fn]): Command => ({
+        id: `select.${key}`,
+        label,
+        category: 'Seleção',
+        run: async () => {
+          const v = await promptDialog({ title: label.replace('…', ''), label: question, initial: '1', confirmLabel: 'Aplicar' });
+          const n = Math.round(Number(v));
+          if (v === null || !Number.isFinite(n) || n < 1 || n > 100) return;
+          attempt((s) => {
+            if (!s.selection) throw new EditorError('Não há seleção.');
+            const next = fn(s.selection, n);
+            s.setSelection(next && clipSelection(next, s.state.width, s.state.height), label.replace('…', ''));
+          });
+        },
+        enabled: hasSel,
+      }),
+    ),
+    {
+      id: 'select.byColor',
+      label: 'Selecionar a cor primária na camada',
+      category: 'Seleção',
+      keys: ['Ctrl+Shift+A'],
+      run: () =>
+        attempt((s) => {
+          const img = s.celImage(s.activeLayerId, s.activeFrameId) ?? new PixelBuffer(s.state.width, s.state.height);
+          const sel = colorSelection(img, ed().primary, ed().options.tolerance);
+          if (!sel) throw new EditorError('A cor primária não aparece nesta camada.');
+          s.setSelection(sel, 'Selecionar por cor');
+        }),
+      enabled: hasDoc,
+    },
+    { id: 'select.scale', label: 'Redimensionar seleção…', category: 'Seleção', keys: ['Ctrl+Alt+T'], run: () => ed().openDialog({ type: 'scale-selection' }), enabled: hasDoc },
     ...(
       [
         ['Left', -1, 0, 'esquerda'],
@@ -227,6 +309,27 @@ export function registerCommands(): void {
     { id: 'image.center', label: 'Centralizar conteúdo da camada', category: 'Imagem', run: () => attempt((s) => centerContent(s, 'cel')), enabled: hasDoc },
     { id: 'image.invert', label: 'Inverter cores', category: 'Imagem', keys: ['Ctrl+I'], run: () => attempt((s) => invertCels(s, 'cel')), enabled: hasDoc },
     { id: 'image.replaceColor', label: 'Substituir cor…', category: 'Imagem', keys: ['Shift+R'], run: () => ed().openDialog({ type: 'replace-color' }), enabled: hasDoc },
+    { id: 'image.hueSaturation', label: 'Matiz e saturação…', category: 'Imagem', keys: ['Ctrl+U'], run: () => ed().openDialog({ type: 'adjust', kind: 'hue-saturation' }), enabled: hasDoc },
+    { id: 'image.brightnessContrast', label: 'Brilho e contraste…', category: 'Imagem', run: () => ed().openDialog({ type: 'adjust', kind: 'brightness-contrast' }), enabled: hasDoc },
+    { id: 'image.grayscale', label: 'Tons de cinza…', category: 'Imagem', run: () => ed().openDialog({ type: 'adjust', kind: 'grayscale' }), enabled: hasDoc },
+    { id: 'image.outline', label: 'Contorno…', category: 'Imagem', keys: ['Ctrl+Alt+O'], run: () => ed().openDialog({ type: 'adjust', kind: 'outline' }), enabled: hasDoc },
+    { id: 'image.despeckle', label: 'Remover pontos soltos…', category: 'Imagem', run: () => ed().openDialog({ type: 'adjust', kind: 'despeckle' }), enabled: hasDoc },
+    {
+      id: 'image.colorRgb',
+      label: 'Modo RGB (cores livres)',
+      category: 'Imagem',
+      run: () => attempt((s) => setColorMode(s, 'rgb')),
+      enabled: hasDoc,
+      checked: () => ed().session?.state.colorMode !== 'indexed',
+    },
+    {
+      id: 'image.colorIndexed',
+      label: 'Modo indexado (só cores da paleta)',
+      category: 'Imagem',
+      run: () => attempt((s) => setColorMode(s, 'indexed')),
+      enabled: hasDoc,
+      checked: () => ed().session?.state.colorMode === 'indexed',
+    },
     { id: 'image.clearLayer', label: 'Limpar camada', category: 'Imagem', run: () => attempt((s) => clearCels(s, 'cel')), enabled: hasDoc },
     { id: 'image.clearFrame', label: 'Limpar quadro (todas as camadas)', category: 'Imagem', run: () => attempt((s) => clearCels(s, 'frame')), enabled: hasDoc },
     {
@@ -322,12 +425,35 @@ export function registerCommands(): void {
     { id: 'anim.first', label: 'Primeiro quadro', category: 'Animação', keys: ['Home'], run: () => frameNav((s) => s.setActiveFrame(s.state.frames[0]!.id)), enabled: hasDoc },
     { id: 'anim.last', label: 'Último quadro', category: 'Animação', keys: ['End'], run: () => frameNav((s) => s.setActiveFrame(s.state.frames.at(-1)!.id)), enabled: hasDoc },
     { id: 'anim.newFrame', label: 'Novo quadro', category: 'Animação', keys: ['Alt+N'], run: () => attempt((s) => addFrame(s)), enabled: hasDoc },
-    { id: 'anim.duplicateFrame', label: 'Duplicar quadro', category: 'Animação', keys: ['Alt+D'], run: () => attempt((s) => duplicateFrame(s)), enabled: hasDoc },
+    {
+      id: 'anim.duplicateFrame',
+      label: 'Duplicar quadro',
+      category: 'Animação',
+      keys: ['Alt+D'],
+      run: () =>
+        attempt((s) => {
+          const ids = selectedFrameIds();
+          if (ids.length > 1) useEditor.setState({ frameSelection: duplicateFrames(s, ids) });
+          else duplicateFrame(s);
+        }),
+      enabled: hasDoc,
+    },
     { id: 'anim.duplicateLinked', label: 'Duplicar quadro com células vinculadas', category: 'Animação', keys: ['Alt+Shift+D'], run: () => attempt((s) => duplicateFrame(s, true)), enabled: hasDoc },
-    { id: 'anim.deleteFrame', label: 'Excluir quadro', category: 'Animação', keys: ['Alt+Delete'], run: () => attempt((s) => deleteFrame(s)), enabled: () => (ed().session?.state.frames.length ?? 0) > 1 },
+    {
+      id: 'anim.deleteFrame',
+      label: 'Excluir quadro',
+      category: 'Animação',
+      keys: ['Alt+Delete'],
+      run: () =>
+        attempt((s) => {
+          deleteFrames(s, selectedFrameIds());
+          useEditor.setState({ frameSelection: [] });
+        }),
+      enabled: () => (ed().session?.state.frames.length ?? 0) > 1,
+    },
     { id: 'anim.moveLeft', label: 'Mover quadro para a esquerda', category: 'Animação', keys: ['Alt+Left'], run: () => attempt((s) => moveFrame(s, s.activeFrameId, frameIdx(s) - 1)), enabled: hasDoc },
     { id: 'anim.moveRight', label: 'Mover quadro para a direita', category: 'Animação', keys: ['Alt+Right'], run: () => attempt((s) => moveFrame(s, s.activeFrameId, frameIdx(s) + 1)), enabled: hasDoc },
-    { id: 'anim.reverse', label: 'Inverter ordem dos quadros', category: 'Animação', run: () => attempt((s) => reverseFrames(s)), enabled: hasDoc },
+    { id: 'anim.reverse', label: 'Inverter ordem dos quadros', category: 'Animação', run: () => attempt((s) => reverseFrameRange(s, selectedFrameIds())), enabled: hasDoc },
     {
       id: 'anim.duration',
       label: 'Duração do quadro…',
@@ -355,19 +481,66 @@ export function registerCommands(): void {
       enabled: hasDoc,
     },
     {
-      id: 'anim.tag',
-      label: 'Marcador do quadro…',
+      id: 'anim.newTag',
+      label: 'Nova tag com os quadros selecionados…',
       category: 'Animação',
-      run: async () => {
+      keys: ['Alt+T'],
+      run: () => {
         const s = ed().session;
         if (!s) return;
-        const f = s.state.frames.find((x) => x.id === s.activeFrameId)!;
-        const v = await promptDialog({ title: 'Marcador do quadro', label: 'Nome (ex.: andar, pular). O marcador vale até o próximo.', initial: f.tag ?? '', confirmLabel: 'Aplicar' });
-        if (v !== null) attempt((x) => setFrameTag(x, f.id, v));
+        const idx = selectedFrameIds().map((id) => s.state.frames.findIndex((f) => f.id === id));
+        ed().openDialog({ type: 'tag', from: Math.min(...idx), to: Math.max(...idx) });
       },
       enabled: hasDoc,
     },
-    { id: 'anim.clearTag', label: 'Remover marcador do quadro', category: 'Animação', run: () => attempt((s) => setFrameTag(s, s.activeFrameId, null)), enabled: () => !!ed().session?.state.frames.find((f) => f.id === ed().session?.activeFrameId)?.tag },
+    {
+      id: 'anim.editTag',
+      label: 'Editar tag do quadro…',
+      category: 'Animação',
+      run: () => {
+        const s = ed().session;
+        const t = s && tagsAt(s.state, s.activeFrameId)[0];
+        if (t) ed().openDialog({ type: 'tag', tagId: t.id });
+      },
+      enabled: () => !!ed().session && tagsAt(ed().session!.state, ed().session!.activeFrameId).length > 0,
+    },
+    {
+      id: 'anim.playTagOnly',
+      label: 'Tocar só a tag do quadro atual',
+      category: 'Animação',
+      run: () => {
+        const was = ed().playing;
+        if (was) stopPlayback();
+        useEditor.setState({ playTagOnly: !ed().playTagOnly });
+        if (was) togglePlayback();
+      },
+      checked: () => ed().playTagOnly,
+    },
+    {
+      id: 'anim.copyFrames',
+      label: 'Copiar quadros',
+      category: 'Animação',
+      keys: ['Alt+C'],
+      run: () =>
+        attempt((s) => {
+          frameClipboard = copyFrames(s, selectedFrameIds());
+          ed().toast('info', frameClipboard.frames.length > 1 ? `${frameClipboard.frames.length} quadros copiados.` : 'Quadro copiado.');
+        }),
+      enabled: hasDoc,
+    },
+    {
+      id: 'anim.pasteFrames',
+      label: 'Colar quadros depois do atual',
+      category: 'Animação',
+      keys: ['Alt+V'],
+      run: () =>
+        attempt((s) => {
+          if (!frameClipboard) return;
+          const ids = pasteFrames(s, frameClipboard);
+          useEditor.setState({ frameSelection: ids.length > 1 ? ids : [] });
+        }),
+      enabled: () => hasDoc() && !!frameClipboard,
+    },
     { id: 'anim.linkPrev', label: 'Vincular célula ao quadro anterior', category: 'Animação', run: () => attempt((s) => linkCelToPrevious(s)), enabled: hasDoc },
     { id: 'anim.unlink', label: 'Desvincular célula', category: 'Animação', run: () => attempt((s) => unlinkCel(s)), enabled: () => !!ed().session && isCelLinked(ed().session!, ed().session!.activeLayerId, ed().session!.activeFrameId) },
     {
@@ -391,6 +564,42 @@ export function registerCommands(): void {
     { id: 'palette.import', label: 'Importar paleta…', category: 'Paleta', run: () => void importPaletteFile(), enabled: hasDoc },
     { id: 'palette.export', label: 'Exportar paleta…', category: 'Paleta', run: () => void exportPaletteFile(), enabled: hasDoc },
     { id: 'palette.tools', label: 'Ferramentas de paleta…', category: 'Paleta', run: () => ed().openDialog({ type: 'palette-tools' }), enabled: hasDoc },
+    ...(Object.keys(PALETTE_SORT_LABELS) as PaletteSort[]).map(
+      (by): Command => ({ id: `palette.sort.${by}`, label: `Ordenar paleta: ${PALETTE_SORT_LABELS[by].toLowerCase()}`, category: 'Paleta', run: () => attempt((s) => sortPalette(s, by)), enabled: hasDoc }),
+    ),
+    {
+      id: 'palette.ramp',
+      label: 'Gerar degradê entre as cores primária e secundária…',
+      category: 'Paleta',
+      enabled: hasDoc,
+      run: async () => {
+        const v = await promptDialog({ title: 'Degradê na paleta', label: 'Quantas cores (2 a 64)?', initial: '6', confirmLabel: 'Gerar' });
+        const n = Number(v);
+        if (!v || !Number.isFinite(n)) return;
+        const added = attempt((s) => addRamp(s, ed().primary, ed().secondary, n));
+        if (added !== undefined) ed().toast(added ? 'success' : 'info', added ? `${added} cor(es) adicionada(s) à paleta.` : 'A paleta já tem essas cores.');
+      },
+    },
+    {
+      id: 'palette.fromDrawing',
+      label: 'Criar paleta com as cores do desenho',
+      category: 'Paleta',
+      enabled: hasDoc,
+      run: () => {
+        const n = attempt((s) => paletteFromDrawing(s));
+        if (n !== undefined) ed().toast('success', `Paleta criada com ${n} cor(es).`);
+      },
+    },
+    {
+      id: 'palette.removeUnused',
+      label: 'Remover cores sem uso da paleta',
+      category: 'Paleta',
+      enabled: hasDoc,
+      run: () => {
+        const n = attempt((s) => removeUnusedColors(s));
+        if (n !== undefined) ed().toast(n ? 'success' : 'info', n ? `${n} cor(es) removida(s).` : 'Todas as cores da paleta estão em uso.');
+      },
+    },
 
     // View
     { id: 'view.zoomIn', label: 'Aumentar zoom', category: 'Visualizar', keys: ['Plus', 'Ctrl+Plus'], repeat: true, run: () => zoomStep(1), enabled: hasDoc },
@@ -423,6 +632,14 @@ export function registerCommands(): void {
       keys: ['Ctrl+;'],
       run: () => prefs().set({ showGuides: !prefs().prefs.showGuides }),
       checked: () => prefs().prefs.showGuides,
+    },
+    {
+      id: 'view.rulers',
+      label: 'Réguas',
+      category: 'Visualizar',
+      keys: ['Ctrl+Alt+R'],
+      run: () => prefs().set({ showRulers: !prefs().prefs.showRulers }),
+      checked: () => prefs().prefs.showRulers,
     },
     { id: 'view.editGuides', label: 'Guias e eixos de simetria…', category: 'Visualizar', run: () => ed().openDialog({ type: 'document-properties' }), enabled: hasDoc },
     {

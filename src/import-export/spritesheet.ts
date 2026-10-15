@@ -1,7 +1,8 @@
 import { PixelBuffer } from '../raster/pixel-buffer';
 import { scaleInteger } from '../raster/scale';
 import { drawOver } from '../editor/raster-ops';
-import type { Frame } from '../project/model';
+import type { DocState, Frame } from '../project/model';
+import { tagRange } from '../animation/tags';
 import { MAX_EXPORT_DIMENSION } from './export-image';
 
 export type SheetLayout = 'horizontal' | 'vertical' | 'grid';
@@ -64,18 +65,27 @@ export interface SheetTag {
   from: number;
   to: number;
   direction: 'forward' | 'reverse' | 'pingpong';
+  /** #RRGGBBAA, as Aseprite writes it. */
+  color?: string;
+  repeat?: string;
 }
 
-/** Ranges of frames grouped by tag: a tag starts at its frame and runs until the next tagged frame. */
-export function frameTags(frames: Frame[], direction: SheetTag['direction'] = 'forward'): SheetTag[] {
-  const out: SheetTag[] = [];
-  frames.forEach((f, i) => {
-    if (!f.tag) return;
-    const prev = out.at(-1);
-    if (prev) prev.to = i - 1;
-    out.push({ name: f.tag, from: i, to: frames.length - 1, direction });
+/** The document's tags as frame index ranges, in the layout spritesheet JSON uses. */
+export interface TagSpan {
+  id: string;
+  name: string;
+  from: number;
+  to: number;
+  direction: SheetTag['direction'];
+  color: string;
+  repeat: number;
+}
+
+export function frameTags(state: Pick<DocState, 'frames' | 'tags'>): TagSpan[] {
+  return state.tags.flatMap((t) => {
+    const r = tagRange(state, t);
+    return r ? [{ id: t.id, name: t.name, from: r.from, to: r.to, direction: t.direction, color: t.color, repeat: t.repeat }] : [];
   });
-  return out;
 }
 
 /**

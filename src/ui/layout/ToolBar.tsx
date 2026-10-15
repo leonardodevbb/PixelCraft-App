@@ -23,13 +23,21 @@ const ICON_FOR: Record<string, IconName> = {
   text: 'text',
   gradient: 'gradient',
   pan: 'pan',
+  spray: 'spray',
+  contour: 'contour',
+  curve: 'curve',
+  blur: 'blur',
+  jumble: 'jumble',
+  'select-ellipse': 'select-ellipse',
+  transform: 'transform',
 };
 
 /** Groups shown in the toolbar, separated by dividers. */
 export const TOOL_GROUPS: string[][] = [
-  ['pencil', 'brush', 'eraser', 'bucket'],
-  ['line', 'rect', 'rect-filled', 'ellipse', 'ellipse-filled', 'gradient'],
-  ['select-rect', 'select-lasso', 'magic-wand', 'move'],
+  ['pencil', 'brush', 'spray', 'eraser', 'bucket'],
+  ['line', 'curve', 'rect', 'rect-filled', 'ellipse', 'ellipse-filled', 'contour', 'gradient'],
+  ['blur', 'jumble'],
+  ['select-rect', 'select-ellipse', 'select-lasso', 'magic-wand', 'move', 'transform'],
   ['eyedropper', 'text', 'pan'],
 ];
 

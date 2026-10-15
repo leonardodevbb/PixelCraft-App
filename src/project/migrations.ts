@@ -39,6 +39,23 @@ const MIGRATIONS: Record<number, Migration> = {
     }
     return { ...m, version: 1, document: doc };
   },
+  // v1 marked tags with a label on their first frame, running until the next
+  // label. v2 stores tags as ranges with their own colour and direction.
+  1: (m) => {
+    const doc = { ...(m.document as Record<string, unknown>) };
+    const frames = Array.isArray(doc.frames) ? (doc.frames as Record<string, unknown>[]) : [];
+    const tags: Record<string, unknown>[] = [];
+    const colors = ['#ff7a3d', '#2ec4b6', '#7b5cff', '#ffd23f', '#ff4f81', '#3ccf91', '#4aa8ff', '#c08a5b'];
+    frames.forEach((f, i) => {
+      if (typeof f.tag !== 'string' || !f.tag) return;
+      const prev = tags.at(-1);
+      if (prev) prev.to = frames[i - 1]!.id;
+      tags.push({ id: `T${tags.length + 1}`, name: f.tag, from: f.id, to: frames.at(-1)!.id, color: colors[tags.length % colors.length], direction: 'forward', repeat: 0 });
+    });
+    doc.frames = frames.map(({ tag: _tag, ...rest }) => rest);
+    doc.tags = tags;
+    return { ...m, version: 2, document: doc };
+  },
 };
 
 export function migrateManifest(raw: unknown): unknown {

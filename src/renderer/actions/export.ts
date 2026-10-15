@@ -1,5 +1,6 @@
 import { encodeImage, IMAGE_FORMATS, type ImageFormat } from '../../import-export/browser-encode';
 import { renderFrameForExport } from '../../import-export/export-image';
+import { encodeSvg } from '../../import-export/svg';
 import { rgba, type RGBA } from '../../raster/color';
 import { api } from '../api';
 import { useEditor } from '../state/editor-store';
@@ -63,4 +64,21 @@ export async function exportImage(req: ImageExportRequest): Promise<boolean> {
 /** Kept for callers that only need PNG. */
 export function exportPng(req: Omit<ImageExportRequest, 'format' | 'quality'>): Promise<boolean> {
   return exportImage({ ...req, format: 'png', quality: 1 });
+}
+
+/** Exports the active frame as SVG (one shape per colour run). */
+export async function exportSvg(): Promise<boolean> {
+  const { session, toast } = useEditor.getState();
+  if (!session) return false;
+  const path = await api.file.saveDialog({ kind: 'image', defaultName: `${session.doc.name}.svg`, title: 'Exportar SVG', extensions: ['svg'], filterName: 'Imagem SVG' });
+  if (!path) return false;
+  try {
+    const img = renderFrameForExport(session.state, session.lookup, { frameId: session.activeFrameId, scale: 1, background: null });
+    await api.file.write(path, new TextEncoder().encode(encodeSvg(img, 8)));
+    toast('success', 'SVG exportado.', { label: 'Mostrar na pasta', run: () => void api.file.showInFolder(path) });
+    return true;
+  } catch (e) {
+    toast('error', `Falha ao exportar: ${errorMessage(e)}`);
+    return false;
+  }
 }

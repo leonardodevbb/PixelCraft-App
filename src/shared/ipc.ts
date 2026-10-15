@@ -4,7 +4,7 @@
  * Node or Electron is reachable from the UI.
  */
 
-export type FileKind = 'project' | 'image' | 'palette' | 'gif' | 'json' | 'any';
+export type FileKind = 'project' | 'image' | 'palette' | 'gif' | 'json' | 'font' | 'any';
 
 export interface AppInfo {
   name: string;
@@ -155,7 +155,10 @@ export const IPC = {
 } as const;
 
 export const FILE_FILTERS: Record<FileKind, { name: string; extensions: string[] }[]> = {
-  project: [{ name: 'Projeto PixelCraft', extensions: ['pixelcraft'] }],
+  project: [
+    { name: 'Projeto PixelCraft', extensions: ['pixelcraft'] },
+    { name: 'Arquivo do Aseprite', extensions: ['aseprite', 'ase'] },
+  ],
   image: [
     { name: 'Imagens', extensions: ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif'] },
     { name: 'PNG', extensions: ['png'] },
@@ -163,6 +166,7 @@ export const FILE_FILTERS: Record<FileKind, { name: string; extensions: string[]
   palette: [{ name: 'Paletas', extensions: ['gpl', 'hex', 'json', 'pal', 'act', 'txt'] }],
   gif: [{ name: 'GIF animado', extensions: ['gif'] }],
   json: [{ name: 'JSON', extensions: ['json'] }],
+  font: [{ name: 'Fontes', extensions: ['ttf', 'otf', 'woff', 'woff2'] }],
   any: [{ name: 'Todos os arquivos', extensions: ['*'] }],
 };
 

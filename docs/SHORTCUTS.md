@@ -24,7 +24,10 @@ Gestos que não são comandos:
 | Importar imagem como camada… | <kbd>Ctrl+Shift+O</kbd> |
 | Importar spritesheet… | — |
 | Exportar GIF animado… | <kbd>Ctrl+Alt+G</kbd> |
+| Exportar PNG animado (APNG)… | — |
+| Exportar quadro como SVG… | — |
 | Exportar spritesheet… | <kbd>Ctrl+Alt+S</kbd> |
+| Exportar para o Aseprite (.aseprite)… | — |
 | Exportar tileset… | — |
 | Exportar sequência de PNG… | — |
 | Abrir recentes… | <kbd>Ctrl+Shift+R</kbd> |
@@ -61,7 +64,44 @@ Gestos que não são comandos:
 | Girar seleção 90° horário | — |
 | Girar seleção 90° anti-horário | — |
 | Girar seleção 180° | — |
-| Redimensionar seleção… | <kbd>Ctrl+T</kbd> |
+| Expandir seleção… | — |
+| Contrair seleção… | — |
+| Borda da seleção… | — |
+| Selecionar a cor primária na camada | <kbd>Ctrl+Shift+A</kbd> |
+| Redimensionar seleção… | <kbd>Ctrl+Alt+T</kbd> |
+
+## Ferramentas
+
+| Ação | Atalho |
+|---|---|
+| Criar pincel a partir da seleção | <kbd>Ctrl+B</kbd> |
+| Pincel padrão | <kbd>Ctrl+Shift+B</kbd> |
+| Lápis | <kbd>B</kbd> |
+| Pincel | <kbd>Shift+B</kbd> |
+| Borracha | <kbd>E</kbd> |
+| Balde de preenchimento | <kbd>G</kbd> |
+| Linha | <kbd>L</kbd> |
+| Retângulo | <kbd>U</kbd> |
+| Retângulo preenchido | <kbd>Shift+U</kbd> |
+| Elipse | <kbd>O</kbd> |
+| Elipse preenchida | <kbd>Shift+O</kbd> |
+| Seleção retangular | <kbd>M</kbd> |
+| Laço | <kbd>Q</kbd> |
+| Varinha mágica | <kbd>W</kbd> |
+| Mover | <kbd>V</kbd> |
+| Texto | <kbd>T</kbd> |
+| Degradê | <kbd>Shift+G</kbd> |
+| Conta-gotas | <kbd>I</kbd> |
+| Mão (mover vista) | <kbd>H</kbd> |
+| Spray | <kbd>A</kbd> |
+| Contorno preenchido | <kbd>Shift+Q</kbd> |
+| Curva | <kbd>Shift+L</kbd> |
+| Desfocar | <kbd>R</kbd> |
+| Embaralhar | <kbd>J</kbd> |
+| Transformar | <kbd>Ctrl+T</kbd> |
+| Seleção elíptica | <kbd>Shift+M</kbd> |
+| Aumentar tamanho da ponta | <kbd>]</kbd> |
+| Diminuir tamanho da ponta | <kbd>[</kbd> |
 
 ## Imagem
 
@@ -80,6 +120,13 @@ Gestos que não são comandos:
 | Centralizar conteúdo da camada | — |
 | Inverter cores | <kbd>Ctrl+I</kbd> |
 | Substituir cor… | <kbd>Shift+R</kbd> |
+| Matiz e saturação… | <kbd>Ctrl+U</kbd> |
+| Brilho e contraste… | — |
+| Tons de cinza… | — |
+| Contorno… | <kbd>Ctrl+Alt+O</kbd> |
+| Remover pontos soltos… | — |
+| Modo RGB (cores livres) | — |
+| Modo indexado (só cores da paleta) | — |
 | Limpar camada | — |
 | Limpar quadro (todas as camadas) | — |
 | Limpar documento inteiro… | — |
@@ -131,8 +178,11 @@ Gestos que não são comandos:
 | Inverter ordem dos quadros | — |
 | Duração do quadro… | — |
 | Aplicar duração a todos os quadros… | — |
-| Marcador do quadro… | — |
-| Remover marcador do quadro | — |
+| Nova tag com os quadros selecionados… | <kbd>Alt+T</kbd> |
+| Editar tag do quadro… | — |
+| Tocar só a tag do quadro atual | — |
+| Copiar quadros | <kbd>Alt+C</kbd> |
+| Colar quadros depois do atual | <kbd>Alt+V</kbd> |
 | Vincular célula ao quadro anterior | — |
 | Desvincular célula | — |
 | Onion skin | <kbd>F3</kbd> |
@@ -152,6 +202,7 @@ Gestos que não são comandos:
 | Grade de pixels | <kbd>Ctrl+'</kbd> |
 | Grade de tiles | <kbd>Ctrl+Shift+'</kbd> |
 | Mostrar guias | <kbd>Ctrl+;</kbd> |
+| Réguas | <kbd>Ctrl+Alt+R</kbd> |
 | Guias e eixos de simetria… | — |
 | Mosaico (repetir a imagem ao redor) | <kbd>Ctrl+Shift+T</kbd> |
 | Painel lateral | <kbd>Tab</kbd> |
@@ -167,6 +218,13 @@ Gestos que não são comandos:
 | Importar paleta… | — |
 | Exportar paleta… | — |
 | Ferramentas de paleta… | — |
+| Ordenar paleta: por matiz | — |
+| Ordenar paleta: por luminosidade | — |
+| Ordenar paleta: por saturação | — |
+| Ordenar paleta: por uso no desenho | — |
+| Gerar degradê entre as cores primária e secundária… | — |
+| Criar paleta com as cores do desenho | — |
+| Remover cores sem uso da paleta | — |
 
 ## Cores
 
@@ -185,27 +243,3 @@ Gestos que não são comandos:
 | Primeiros passos | — |
 | Informações de diagnóstico | — |
 | Sobre o PixelCraft | — |
-
-## Ferramentas
-
-| Ação | Atalho |
-|---|---|
-| Lápis | <kbd>B</kbd> |
-| Pincel | <kbd>Shift+B</kbd> |
-| Borracha | <kbd>E</kbd> |
-| Balde de preenchimento | <kbd>G</kbd> |
-| Linha | <kbd>L</kbd> |
-| Retângulo | <kbd>U</kbd> |
-| Retângulo preenchido | <kbd>Shift+U</kbd> |
-| Elipse | <kbd>O</kbd> |
-| Elipse preenchida | <kbd>Shift+O</kbd> |
-| Seleção retangular | <kbd>M</kbd> |
-| Laço | <kbd>Q</kbd> |
-| Varinha mágica | <kbd>W</kbd> |
-| Mover | <kbd>V</kbd> |
-| Texto | <kbd>T</kbd> |
-| Degradê | <kbd>Shift+G</kbd> |
-| Conta-gotas | <kbd>I</kbd> |
-| Mão (mover vista) | <kbd>H</kbd> |
-| Aumentar tamanho da ponta | <kbd>]</kbd> |
-| Diminuir tamanho da ponta | <kbd>[</kbd> |

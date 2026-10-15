@@ -180,7 +180,7 @@ export function ResizeContentDialog() {
   );
 }
 
-const SCOPES = (Object.keys(SCOPE_LABELS) as CelScope[]).map((value) => ({ value, label: SCOPE_LABELS[value] }));
+export const SCOPES = (Object.keys(SCOPE_LABELS) as CelScope[]).map((value) => ({ value, label: SCOPE_LABELS[value] }));
 
 export function OffsetDialog() {
   const close = useEditor((s) => s.closeDialog);
@@ -233,7 +233,7 @@ export function OffsetDialog() {
   );
 }
 
-function ColorField({ label, value, onChange, allowTransparent }: { label: string; value: RGBA; onChange: (c: RGBA) => void; allowTransparent?: boolean }) {
+export function ColorField({ label, value, onChange, allowTransparent }: { label: string; value: RGBA; onChange: (c: RGBA) => void; allowTransparent?: boolean }) {
   const transparent = value === TRANSPARENT;
   return (
     <div className="field color-field">

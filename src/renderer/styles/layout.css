@@ -91,7 +91,7 @@
 }
 
 .toolbar {
-  width: 44px;
+  width: 76px;
   flex: none;
   display: flex;
   flex-direction: column;
@@ -104,8 +104,8 @@
   overflow-y: auto;
 }
 .tool-group {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 32px);
   gap: 2px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--border);
@@ -140,6 +140,16 @@
   font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.tool-badge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--panel-3);
+  white-space: nowrap;
+}
+.ink-field {
+  display: contents;
 }
 .option-group {
   display: flex;
@@ -198,4 +208,51 @@
   .tool-hint {
     display: none;
   }
+}
+
+/* Rulers along the canvas edges (View → Réguas). */
+.ruler {
+  position: absolute;
+  z-index: 2;
+  cursor: copy;
+}
+.ruler-top {
+  top: 0;
+  left: 0;
+  height: 18px;
+  width: 100%;
+  border-bottom: 1px solid var(--border);
+}
+.ruler-left {
+  top: 0;
+  left: 0;
+  width: 18px;
+  height: 100%;
+  border-right: 1px solid var(--border);
+}
+.ruler-corner {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: 0;
+  width: 18px;
+  height: 18px;
+  background: var(--panel);
+}
+.guide-drag {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  background: var(--accent);
+  opacity: 0.8;
+}
+.guide-drag-y {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+.guide-drag-x {
+  top: 0;
+  bottom: 0;
+  width: 1px;
 }

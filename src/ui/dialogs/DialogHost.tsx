@@ -1,3 +1,4 @@
+import { AdjustDialog } from './AdjustDialog';
 import { useEditor } from '../../renderer/state/editor-store';
 import { AboutDialog } from './AboutDialog';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -18,6 +19,7 @@ import { TutorialDialog } from './TutorialDialog';
 import { RecentDialog } from './RecentDialog';
 import { DiagnosticsDialog } from './DiagnosticsDialog';
 import { DocumentPropertiesDialog } from './DocumentPropertiesDialog';
+import { TagDialog } from './TagDialog';
 
 export function DialogHost() {
   const d = useEditor((s) => s.dialog);
@@ -41,6 +43,8 @@ export function DialogHost() {
       return <ResizeContentDialog />;
     case 'offset':
       return <OffsetDialog />;
+    case 'adjust':
+      return <AdjustDialog kind={d.kind} />;
     case 'replace-color':
       return <ReplaceColorDialog />;
     case 'scale-selection':
@@ -51,6 +55,8 @@ export function DialogHost() {
       return <PaletteToolsDialog />;
     case 'export-gif':
       return <AnimationExportDialog kind="gif" />;
+    case 'export-apng':
+      return <AnimationExportDialog kind="apng" />;
     case 'export-sequence':
       return <AnimationExportDialog kind="sequence" />;
     case 'export-spritesheet':
@@ -71,6 +77,8 @@ export function DialogHost() {
       return <TutorialDialog />;
     case 'tileset':
       return <TilesDialog />;
+    case 'tag':
+      return <TagDialog tagId={d.tagId} from={d.from} to={d.to} />;
     case 'text':
       return <TextDialog x={d.x} y={d.y} />;
     default:

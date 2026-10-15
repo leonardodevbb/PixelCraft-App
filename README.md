@@ -7,38 +7,46 @@ pensado para quem está começando e rápido para quem já desenha sprites.
 Funciona offline, guarda os projetos apenas no seu computador e não tem
 telemetria.
 
-> Versão 0.1.0. O que está pronto, o que falta e as próximas ideias estão em
+> Versão 0.2.0. O que está pronto, o que falta e as próximas ideias estão em
 > [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Funcionalidades
 
-* **Desenho:** lápis, pincel com opacidade, borracha, linha, retângulo, elipse
-  (contorno e preenchidos), balde com tolerância, degradê linear/radial com
-  pontilhado ordenado, texto com fonte bitmap acentuada e conta-gotas. Simetria
-  horizontal e vertical. Shift trava ângulos e proporções.
-* **Seleção:** retangular, laço e varinha mágica (adicionar, subtrair,
-  intersectar), mover com Alt para duplicar, girar, espelhar e escalar a
-  seleção, copiar e colar com a área de transferência do sistema.
-* **Camadas:** grupos aninhados, opacidade, modos de mesclagem, bloqueio,
-  camadas de referência fora da exportação, etiquetas de cor, mesclar para
-  baixo ou tudo, arrastar e soltar.
-* **Animação:** linha do tempo com miniaturas, duração por quadro, FPS,
-  repetir, uma vez ou vai e volta, papel vegetal, marcadores de trecho,
-  células vinculadas e reprodução no canvas.
-* **Cores:** seletor HSV com HEX/RGBA/HSL, paletas incluídas e próprias,
-  importação e exportação GPL/HEX/JSON/JASC/ACT, análise de cores fora da
-  paleta e redução de cores.
-* **Imagem:** tamanho da tela com âncora, redimensionar, cortar, aparar, girar,
-  espelhar, deslocar com repetição, substituir cor.
+* **Desenho:** lápis com pixel perfeito, pincel com opacidade, borracha,
+  spray, linha, curva Bézier, retângulo, elipse (contorno e preenchidos),
+  contorno preenchido, balde com tolerância, degradê com pontilhado, desfocar,
+  embaralhar, texto (fonte de pixel 5×7, fontes do sistema ou TTF/OTF
+  carregadas) e conta-gotas. Tintas normal, travar transparência e
+  sombreamento pela paleta. Pincel personalizado a partir da seleção (Ctrl+B).
+  Pressão da caneta. Simetria horizontal e vertical.
+* **Seleção:** retangular, elíptica, laço, varinha mágica e por cor; expandir,
+  contrair e borda. Transformação na tela (Ctrl+T) com alças, rotação livre
+  RotSprite, escala e espelhamento. Copiar e colar com a área de
+  transferência do sistema.
+* **Camadas:** grupos aninhados, opacidade, 19 modos de mesclagem (os mesmos
+  do Aseprite), bloqueio, camadas de referência fora da exportação, etiquetas
+  de cor, mesclar para baixo ou tudo, arrastar e soltar.
+* **Animação:** linha do tempo com miniaturas, duração por quadro, tags com
+  nome, cor, direção e repetições, tocar só a tag atual, seleção de vários
+  quadros, copiar e colar quadros (Alt+C / Alt+V), papel vegetal e células
+  vinculadas.
+* **Cores:** modo RGB ou indexado (só cores da paleta; editar uma cor da
+  paleta recolore o desenho), seletor HSV com HEX/RGBA/HSL, paletas incluídas e
+  próprias, importação e exportação GPL/HEX/JSON/JASC/ACT, ordenar, degradê
+  entre duas cores, paleta a partir do desenho, análise e redução de cores.
+* **Imagem:** matiz e saturação, brilho e contraste, tons de cinza, contorno e
+  remover pontos soltos com prévia ao vivo; tamanho da tela, redimensionar,
+  cortar, aparar, girar, espelhar, deslocar, substituir cor.
 * **Tiles:** grade de tiles, modo mosaico para conferir emendas e exportação de
   tileset sem repetições com mapa do Tiled (`.tmj`).
-* **Importar:** PNG, GIF animado, JPEG, WebP, BMP, imagem como camada e
-  spritesheet fatiada em quadros.
-* **Exportar:** PNG, JPEG, WebP e BMP em escala inteira, GIF animado,
-  spritesheet com JSON, sequência de PNG e tileset.
+* **Importar:** arquivos do Aseprite (`.aseprite`/`.ase`), PNG, GIF animado,
+  JPEG, WebP, BMP, imagem como camada e spritesheet fatiada em quadros.
+* **Exportar:** PNG, JPEG, WebP, BMP e SVG, GIF e PNG animado (APNG),
+  spritesheet com JSON, sequência de PNG, tileset e `.aseprite`. Animações
+  podem exportar só uma tag.
 * **Projetos `.pixelcraft`:** ZIP versionado e validado, gravação atômica,
   recentes com miniatura, salvamento automático e recuperação após falhas.
-* **Fluxo:** paleta de comandos (Ctrl+K), atalhos configuráveis com detecção
+* **Fluxo:** réguas com guias arrastáveis, paleta de comandos (Ctrl+K), atalhos configuráveis com detecção
   de conflitos, histórico navegável, temas escuro, claro e do sistema,
   primeiros passos para iniciantes.
 * **Privacidade e segurança:** funciona offline, sem telemetria, sem anúncios;

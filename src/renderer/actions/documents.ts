@@ -6,6 +6,7 @@ import { deserializeProject, ProjectFormatError, serializeProject } from '../../
 import { composeFrame } from '../../layers/compose';
 import { decodeImage, sniffImageType } from '../../import-export/browser-decode';
 import { decodeGif } from '../../import-export/gif';
+import { decodeAseprite, encodeAseprite, isAseprite } from '../../import-export/aseprite';
 import { encodePng } from '../../import-export/png';
 import { resizeNearest } from '../../raster/scale';
 import { newId } from '../../project/ids';
@@ -92,6 +93,14 @@ export async function openBytes(path: string, name: string, data: Uint8Array): P
   const prev = store.session;
   store.setBusy('Abrindo…');
   try {
+    if (isAseprite(data)) {
+      const doc = decodeAseprite(data, stripExt(name));
+      if (prev) await discardRecovery(prev);
+      // Saving keeps the .pixelcraft format, so the file asks for a new location.
+      activate(doc, null, { dirty: true });
+      store.toast('success', `"${name}" aberto do Aseprite (${doc.state.width}×${doc.state.height}, ${doc.state.frames.length} quadros).`);
+      return;
+    }
     if (sniffImageType(data) === 'gif') {
       const frames = decodeGif(data, { maxPixels: LIMITS.maxPixels, maxFrames: LIMITS.maxFrames });
       if (frames.length > 1) {
@@ -200,6 +209,25 @@ export async function saveAs(): Promise<boolean> {
 }
 
 /* ---------- autosave / recovery ---------- */
+
+/** Writes the current document as an .aseprite file. */
+export async function exportAseprite(): Promise<boolean> {
+  const { session, toast, setBusy } = useEditor.getState();
+  if (!session) return false;
+  const path = await api.file.saveDialog({ kind: 'project', defaultName: `${session.doc.name}.aseprite`, title: 'Exportar para o Aseprite', extensions: ['aseprite'], filterName: 'Arquivo do Aseprite' });
+  if (!path) return false;
+  setBusy('Exportando…');
+  try {
+    await api.file.write(path, encodeAseprite(session.doc));
+    toast('success', 'Arquivo .aseprite exportado.', { label: 'Mostrar na pasta', run: () => void api.file.showInFolder(path) });
+    return true;
+  } catch (e) {
+    toast('error', `Falha ao exportar: ${errorMessage(e)}`);
+    return false;
+  } finally {
+    setBusy(null);
+  }
+}
 
 export async function discardRecovery(s: EditorSession): Promise<void> {
   await api.recovery.remove(s.doc.id).catch(() => undefined);

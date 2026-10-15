@@ -44,8 +44,8 @@ function paeth(a: number, b: number, c: number): number {
   return c;
 }
 
-/** Encodes 8-bit RGBA (color type 6), choosing a filter per row heuristically. */
-export function encodePng(img: PixelBuffer, opts: PngEncodeOptions = {}): Uint8Array {
+/** Filtered scanlines of an RGBA image, choosing a filter per row heuristically. */
+function filterRows(img: PixelBuffer): Uint8Array {
   const { width: w, height: h, data } = img;
   if (w < 1 || h < 1) throw new PngError('Uma imagem PNG precisa ter pelo menos 1×1 pixel.');
   const stride = w * 4;
@@ -86,6 +86,10 @@ export function encodePng(img: PixelBuffer, opts: PngEncodeOptions = {}): Uint8A
     raw[y * (stride + 1)] = bestType;
     raw.set(best, y * (stride + 1) + 1);
   }
+  return raw;
+}
+
+function ihdrChunk(w: number, h: number): Uint8Array {
   const ihdr = new Uint8Array(13);
   ihdr.set(u32(w), 0);
   ihdr.set(u32(h), 4);
@@ -94,25 +98,79 @@ export function encodePng(img: PixelBuffer, opts: PngEncodeOptions = {}): Uint8A
   ihdr[10] = 0;
   ihdr[11] = 0;
   ihdr[12] = 0;
-  const parts: Uint8Array[] = [new Uint8Array(SIGNATURE), chunk('IHDR', ihdr)];
-  for (const [k, v] of Object.entries(opts.text ?? {})) {
+  return chunk('IHDR', ihdr);
+}
+
+function textChunks(text: Record<string, string> = {}): Uint8Array[] {
+  return Object.entries(text).map(([k, v]) => {
     const kb = new TextEncoder().encode(k.slice(0, 79));
     const vb = new TextEncoder().encode(v);
     const d = new Uint8Array(kb.length + 1 + vb.length);
     d.set(kb, 0);
     d.set(vb, kb.length + 1);
-    parts.push(chunk('tEXt', d));
-  }
-  parts.push(chunk('IDAT', zlibSync(raw, { level: opts.level ?? 6 })));
+    return chunk('tEXt', d);
+  });
+}
+
+/** Encodes 8-bit RGBA (color type 6). */
+export function encodePng(img: PixelBuffer, opts: PngEncodeOptions = {}): Uint8Array {
+  const raw = filterRows(img);
+  return concat([
+    new Uint8Array(SIGNATURE),
+    ihdrChunk(img.width, img.height),
+    ...textChunks(opts.text),
+    chunk('IDAT', zlibSync(raw, { level: opts.level ?? 6 })),
+    chunk('IEND', new Uint8Array(0)),
+  ]);
+}
+
+export interface ApngFrame {
+  image: PixelBuffer;
+  delayMs: number;
+}
+
+/**
+ * Encodes an animated PNG. Unlike GIF it keeps full alpha, millions of
+ * colours and millisecond durations. Every frame covers the whole canvas and
+ * replaces it (APNG_BLEND_OP_SOURCE), so semi-transparent pixels never pile up.
+ * `plays`: 0 = forever.
+ */
+export function encodeApng(frames: ApngFrame[], opts: PngEncodeOptions & { plays?: number } = {}): Uint8Array {
+  const first = frames[0];
+  if (!first) throw new PngError('Uma animação precisa de pelo menos um quadro.');
+  const { width: w, height: h } = first.image;
+  const parts: Uint8Array[] = [new Uint8Array(SIGNATURE), ihdrChunk(w, h)];
+  const actl = new Uint8Array(8);
+  actl.set(u32(frames.length), 0);
+  actl.set(u32(opts.plays ?? 0), 4);
+  parts.push(chunk('acTL', actl), ...textChunks(opts.text));
+  let seq = 0;
+  frames.forEach((f, i) => {
+    if (f.image.width !== w || f.image.height !== h) throw new PngError('Todos os quadros de um APNG precisam ter o mesmo tamanho.');
+    const fctl = new Uint8Array(26);
+    fctl.set(u32(seq++), 0);
+    fctl.set(u32(w), 4);
+    fctl.set(u32(h), 8);
+    // x/y offsets stay 0. Delay as a fraction of a second: ms / 1000.
+    const delay = Math.max(0, Math.min(65535, Math.round(f.delayMs)));
+    fctl[20] = delay >> 8;
+    fctl[21] = delay & 255;
+    fctl[22] = 1000 >> 8;
+    fctl[23] = 1000 & 255;
+    fctl[24] = 0; // dispose: none
+    fctl[25] = 0; // blend: source
+    parts.push(chunk('fcTL', fctl));
+    const z = zlibSync(filterRows(f.image), { level: opts.level ?? 6 });
+    if (i === 0) parts.push(chunk('IDAT', z));
+    else {
+      const fd = new Uint8Array(4 + z.length);
+      fd.set(u32(seq++), 0);
+      fd.set(z, 4);
+      parts.push(chunk('fdAT', fd));
+    }
+  });
   parts.push(chunk('IEND', new Uint8Array(0)));
-  const total = parts.reduce((n, p) => n + p.length, 0);
-  const out = new Uint8Array(total);
-  let off = 0;
-  for (const p of parts) {
-    out.set(p, off);
-    off += p.length;
-  }
-  return out;
+  return concat(parts);
 }
 
 export interface PngInfo {

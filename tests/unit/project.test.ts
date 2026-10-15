@@ -21,7 +21,8 @@ function richSession(): EditorSession {
   s.apply('estrutura', (st) => ({
     ...st,
     layers: [...st.layers, group, guide],
-    frames: [...st.frames, { ...f2, tag: 'andar' }],
+    frames: [...st.frames, f2],
+    tags: [{ id: 'T1', name: 'andar', from: f2.id, to: f2.id, color: '#2ec4b6', direction: 'pingpong', repeat: 2 }],
     animation: { fps: 12, loop: 'pingpong', direction: 'reverse' },
     guides: [{ axis: 'x', position: 3 }],
   }), { layerId: top.id });
@@ -49,6 +50,7 @@ describe('.pixelcraft format', () => {
     expect(doc.state.palette).toEqual(s.state.palette);
     expect(doc.state.animation).toEqual(s.state.animation);
     expect(doc.state.guides).toEqual(s.state.guides);
+    expect(doc.state.tags).toEqual(s.state.tags);
     for (const id of Object.values(s.state.cels)) expect(doc.images.get(id)!.equals(s.doc.images.get(id)!)).toBe(true);
     // linked cels stay linked (one image stored)
     expect(new Set(Object.values(doc.state.cels)).size).toBe(doc.images.size);
@@ -74,7 +76,7 @@ describe('.pixelcraft format', () => {
     const files = unzipSync(bytes);
     const manifest = JSON.parse(strFromU8(files['manifest.json']!));
     expect(manifest.format).toBe('pixelcraft');
-    expect(manifest.version).toBe(1);
+    expect(manifest.version).toBe(2);
     expect(files['thumbnail.png']).toBeDefined();
   });
 
@@ -103,6 +105,7 @@ describe('.pixelcraft format', () => {
     expect(() => deserializeProject(tamper((m) => (m.document.cels['nope/x'] = Object.values(m.document.cels)[0])))).toThrow(/Célula inválida/);
     expect(() => deserializeProject(tamper((m) => { const k = Object.keys(m.images)[0]!; m.images[k].file = '../evil.png'; }))).toThrow(ProjectFormatError);
     expect(() => deserializeProject(tamper((m) => (m.document.layers.push({ ...m.document.layers[0] }))))).toThrow(/duplicados/);
+    expect(() => deserializeProject(tamper((m) => (m.document.tags[0].to = 'F_missing')))).toThrow(/quadro inexistente/);
   });
 
   it('rejects images whose size does not match the document', () => {
@@ -116,6 +119,24 @@ describe('.pixelcraft format', () => {
   it('ignores unexpected archive entries such as path traversal names', () => {
     const bytes = tamper(() => {}, { '../../evil.sh': strToU8('rm -rf /'), 'images/../../x.png': strToU8('x') });
     expect(() => deserializeProject(bytes)).not.toThrow();
+  });
+
+  it('turns v1 frame markers into tag ranges', () => {
+    const bytes = tamper((m) => {
+      m.version = 1;
+      delete m.document.tags;
+      const f = m.document.frames;
+      f.push({ id: 'F3', duration: 100 }, { id: 'F4', duration: 100 });
+      f[0].tag = 'parado';
+      f[2].tag = 'andar';
+    });
+    const doc = deserializeProject(bytes);
+    const ids = doc.state.frames.map((f) => f.id);
+    expect(doc.state.tags.map((t) => [t.name, ids.indexOf(t.from), ids.indexOf(t.to)])).toEqual([
+      ['parado', 0, 1],
+      ['andar', 2, 3],
+    ]);
+    expect(doc.state.frames.every((f) => !('tag' in f))).toBe(true);
   });
 
   it('migrates legacy v0 manifests', () => {

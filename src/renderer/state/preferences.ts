@@ -23,6 +23,7 @@ export const preferencesSchema = z.object({
   defaultExportScale: z.number().int().min(1).max(64).catch(1),
   showSymmetryAxes: z.boolean().catch(true),
   showGuides: z.boolean().catch(true),
+  showRulers: z.boolean().catch(false),
   showTutorial: z.boolean().catch(true),
   shortcuts: z.record(z.string(), z.array(z.string().max(40)).max(4)).catch({}),
   panels: z

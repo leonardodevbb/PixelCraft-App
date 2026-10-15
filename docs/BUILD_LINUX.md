@@ -45,7 +45,7 @@ rodar e não instala nada no sistema por conta própria.
 Instalar e remover:
 
 ```bash
-sudo apt install ./release/pixelcraft_0.1.0_amd64.deb
+sudo apt install ./release/pixelcraft_0.2.0_amd64.deb
 sudo apt remove pixelcraft
 ```
 
@@ -54,12 +54,12 @@ sudo apt remove pixelcraft
 Arquivo único, sem instalação:
 
 ```bash
-chmod +x PixelCraft-0.1.0-x86_64.AppImage
-./PixelCraft-0.1.0-x86_64.AppImage
+chmod +x PixelCraft-0.2.0-x86_64.AppImage
+./PixelCraft-0.2.0-x86_64.AppImage
 ```
 
 Precisa de FUSE 2 (`sudo apt install libfuse2` no Ubuntu 22.04+). Sem FUSE:
-`./PixelCraft-0.1.0-x86_64.AppImage --appimage-extract-and-run`. A associação de
+`./PixelCraft-0.2.0-x86_64.AppImage --appimage-extract-and-run`. A associação de
 arquivos depende de uma ferramenta de integração (por exemplo AppImageLauncher
 ou Gear Lever); o AppImage em si não altera o sistema.
 
@@ -85,7 +85,7 @@ dentro de Imagens, Documentos ou Downloads.
 
 ```bash
 npm run package:flatpak
-flatpak install --user release/PixelCraft-0.1.0.flatpak
+flatpak install --user release/PixelCraft-0.2.0.flatpak
 flatpak run io.github.leonardodevbb.PixelCraft
 ```
 
@@ -94,7 +94,7 @@ flatpak run io.github.leonardodevbb.PixelCraft
 job `packages` do GitHub Actions (`.github/workflows/ci.yml`). Esse job roda
 `scripts/build-flatpak.sh`, depois `scripts/verify-packages.sh --smoke
 --flatpak-run`, que instala o pacote para o usuário do runner e o inicia
-(`PIXELCRAFT_SMOKE_OK 0.1.0 flatpak`), e publica o `.flatpak` como artefato
+(`PIXELCRAFT_SMOKE_OK 0.2.0 flatpak`), e publica o `.flatpak` como artefato
 `pixelcraft-linux`.
 
 ## Verificação
@@ -137,3 +137,13 @@ No Flatpak esses caminhos ficam dentro de `~/.var/app/io.github.leonardodevbb.Pi
   gerenciador de pacotes ou por um AppImage novo.
 * `desktopName` (`pixelcraft.desktop`) e `StartupWMClass=pixelcraft` fazem a
   janela aparecer com o ícone certo nas docas.
+
+## Publicar uma versão
+
+1. Suba a versão em `package.json` (`npm version X.Y.Z --no-git-tag-version`),
+   acrescente a entrada em `packaging/flatpak/*.metainfo.xml` e escreva as
+   notas em `docs/releases/X.Y.Z.md`.
+2. Depois do merge no `main`, crie e envie a tag: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+3. O workflow `Release` gera o `.deb`, o AppImage e o Flatpak, testa os três e
+   publica o Release no GitHub com as notas e um `SHA256SUMS`. Ele recusa a tag
+   se ela não bater com a versão do `package.json`.

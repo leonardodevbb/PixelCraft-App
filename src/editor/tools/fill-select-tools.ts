@@ -5,6 +5,7 @@ import { EditorError } from '../session';
 import {
   clipSelection,
   combineSelections,
+  ellipseSelection,
   floodMask,
   polygonSelection,
   rectSelection,
@@ -100,6 +101,48 @@ class RectSelectTool implements Tool {
   cancel(host: ToolHost): void {
     this.start = this.end = null;
     host.preview({ marquee: null });
+  }
+}
+
+/** Elliptical marquee, with the same modifiers as the rectangular one. */
+class EllipseSelectTool implements Tool {
+  readonly id = 'select-ellipse' as const;
+  readonly label = 'Seleção elíptica';
+  cursor = 'crosshair';
+  private start: Point | null = null;
+  private end: Point | null = null;
+  private moved = false;
+
+  onDown(p: ToolPointer, host: ToolHost): void {
+    this.start = { x: p.x, y: p.y };
+    this.end = this.start;
+    this.moved = false;
+    host.preview({ ellipse: rectFromCorners(this.start, this.end) });
+  }
+  onMove(p: ToolPointer, host: ToolHost): void {
+    if (!this.start) return;
+    let end = { x: p.x, y: p.y };
+    if (p.shift && !p.alt && p.ctrl) end = constrainSquare(this.start, end);
+    if (end.x !== this.start.x || end.y !== this.start.y) this.moved = true;
+    this.end = end;
+    host.preview({ ellipse: rectFromCorners(this.start, end) });
+  }
+  onUp(p: ToolPointer, host: ToolHost): void {
+    if (!this.start || !this.end) return;
+    const s = host.session;
+    host.preview({ ellipse: null });
+    const mode = selectionMode(p);
+    if (!this.moved && mode === 'replace') {
+      if (s.selection) s.setSelection(null);
+    } else {
+      const r = clipSelection(ellipseSelection(rectFromCorners(this.start, this.end)), s.state.width, s.state.height);
+      if (r) s.setSelection(combineSelections(s.selection, r, mode), 'Selecionar elipse');
+    }
+    this.start = this.end = null;
+  }
+  cancel(host: ToolHost): void {
+    this.start = this.end = null;
+    host.preview({ ellipse: null });
   }
 }
 
@@ -229,6 +272,7 @@ class MoveTool implements Tool {
 
 export const bucketTool = new BucketTool();
 export const rectSelectTool = new RectSelectTool();
+export const ellipseSelectTool = new EllipseSelectTool();
 export const lassoTool = new LassoTool();
 export const magicWandTool = new MagicWandTool();
 export const moveTool = new MoveTool();

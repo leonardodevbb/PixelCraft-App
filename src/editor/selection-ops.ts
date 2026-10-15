@@ -4,6 +4,7 @@ import { composeFrame } from '../layers/compose';
 import { drawOver, flipH, flipV, rotate } from './raster-ops';
 import { clipSelection, rectSelection, translateSelection, type Selection } from './selection';
 import { EditorError, type EditorSession } from './session';
+import type { CustomBrush } from './painter';
 
 /** Pixels lifted out of a selection, positioned in document coordinates. */
 export interface Piece {
@@ -154,3 +155,27 @@ export function pieceSelection(piece: Piece, x: number, y: number): Selection {
   return { bounds: { x, y, w: piece.buffer.width, h: piece.buffer.height }, mask: piece.mask };
 }
 
+
+/**
+ * Captures the selected pixels of the active layer as a custom brush, centred
+ * on the pointer like the round and square tips. Transparent pixels are not
+ * part of the brush.
+ */
+export function brushFromSelection(s: EditorSession): CustomBrush {
+  const sel = s.selection;
+  if (!sel) throw new EditorError('Selecione a área que vai virar pincel.');
+  const img = s.celImage(s.activeLayerId, s.activeFrameId);
+  const b = sel.bounds;
+  const pixels: CustomBrush['pixels'] = [];
+  const ox = Math.floor(b.w / 2);
+  const oy = Math.floor(b.h / 2);
+  for (let y = 0; y < b.h; y++)
+    for (let x = 0; x < b.w; x++) {
+      if (!sel.mask[y * b.w + x]) continue;
+      const c = img?.get(b.x + x, b.y + y) ?? 0;
+      if ((c & 255) !== 0) pixels.push({ x: x - ox, y: y - oy, c });
+    }
+  if (!pixels.length) throw new EditorError('A seleção está vazia nesta camada; não há pixels para o pincel.');
+  if (pixels.length > 128 * 128) throw new EditorError('A seleção é grande demais para um pincel (máximo 128×128).');
+  return { pixels };
+}

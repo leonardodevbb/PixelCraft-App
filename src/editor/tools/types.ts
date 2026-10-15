@@ -3,6 +3,8 @@ import type { BrushShape } from '../../raster/shapes';
 import type { DitherMode, GradientShape } from '../../raster/gradient';
 import type { EditorSession } from '../session';
 import type { Point, Rect } from '../../raster/rect';
+import type { CustomBrush, InkMode } from '../painter';
+import type { TransformAlgorithm } from '../../raster/transform';
 
 export type ToolId =
   | 'pencil'
@@ -21,7 +23,14 @@ export type ToolId =
   | 'move'
   | 'text'
   | 'gradient'
-  | 'pan';
+  | 'pan'
+  | 'spray'
+  | 'contour'
+  | 'curve'
+  | 'blur'
+  | 'jumble'
+  | 'select-ellipse'
+  | 'transform';
 
 export type ColorSlot = 'primary' | 'secondary';
 
@@ -36,6 +45,8 @@ export interface ToolPointer {
   shift: boolean;
   ctrl: boolean;
   alt: boolean;
+  /** Pen pressure 0..1; only set for pens (mice report a fixed value). */
+  pressure?: number;
 }
 
 export interface ToolOptions {
@@ -54,6 +65,22 @@ export interface ToolOptions {
   letterSpacing: number;
   lineSpacing: number;
   textAlign: 'left' | 'center' | 'right';
+  /** '' = the built-in 5×7 pixel font; otherwise a system or loaded font family. */
+  textFont: string;
+  /** Pen pressure scales the size of freehand strokes. */
+  pressureSize: boolean;
+  /** Size in pixels for system/loaded fonts. */
+  textSize: number;
+  /** How paint tools change the pixels they touch. */
+  ink: InkMode;
+  /** Freehand strokes of size 1 drop "L" corners for clean one-pixel lines. */
+  pixelPerfect: boolean;
+  /** Spray: pixels per sample, as a percentage of the spray area (1..100). */
+  sprayDensity: number;
+  /** Brush captured from a selection; replaces size and shape when set. */
+  customBrush: CustomBrush | null;
+  /** How the transform tool resamples rotated and scaled pixels. */
+  transformAlgorithm: TransformAlgorithm;
 }
 
 export const DEFAULT_TOOL_OPTIONS: ToolOptions = {
@@ -69,6 +96,14 @@ export const DEFAULT_TOOL_OPTIONS: ToolOptions = {
   letterSpacing: 1,
   lineSpacing: 1,
   textAlign: 'left',
+  textFont: '',
+  pressureSize: false,
+  textSize: 12,
+  ink: 'simple',
+  pixelPerfect: false,
+  sprayDensity: 20,
+  customBrush: null,
+  transformAlgorithm: 'rotsprite',
 };
 
 /** Transient visuals a tool can ask the canvas to draw. */
@@ -77,6 +112,12 @@ export interface ToolPreview {
   lasso?: Point[] | null;
   /** Shift the selection outline while dragging. */
   selectionOffset?: Point | null;
+  /** Ellipse being dragged by the elliptical selection tool. */
+  ellipse?: Rect | null;
+  /** Control points of a curve being edited (start, c1, c2, end). */
+  handles?: Point[] | null;
+  /** Corners of the piece being transformed (clockwise from top-left). */
+  transformBox?: Point[] | null;
 }
 
 export interface ToolHost {
@@ -91,6 +132,8 @@ export interface ToolHost {
   preview(p: ToolPreview): void;
   /** Text tool: asks the UI to open the text editor at a pixel. */
   requestText?(at: Point): void;
+  /** Screen pixels per document pixel, for hit-testing on-canvas handles. */
+  zoom?: number;
 }
 
 export interface Tool {
@@ -101,6 +144,14 @@ export interface Tool {
   onUp(p: ToolPointer, host: ToolHost): void;
   /** Escape or focus loss in the middle of an interaction. */
   cancel(host: ToolHost): void;
+  /** The user switched to another tool: drop any half-finished work. */
+  deactivate?(host: ToolHost): void;
+  /** The user switched to this tool. */
+  activate?(host: ToolHost): void;
+  /** True while the tool holds work that Enter would apply. */
+  isPending?(): boolean;
+  /** Applies the pending work (Enter). */
+  apply?(host: ToolHost): void;
   /** CSS cursor for the canvas. */
   cursor: string;
 }

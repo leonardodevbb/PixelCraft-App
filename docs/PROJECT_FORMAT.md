@@ -9,12 +9,12 @@ images/<id>.png     uma imagem PNG RGBA 8 bits por imagem única
 thumbnail.png       miniatura do primeiro quadro (opcional, ignorada ao abrir)
 ```
 
-## manifest.json (versão 1)
+## manifest.json (versão 2)
 
 ```jsonc
 {
   "format": "pixelcraft",
-  "version": 1,
+  "version": 2,
   "generator": "PixelCraft 0.1.0",
   "savedAt": "2026-10-11T03:00:00.000Z",
   "document": {
@@ -24,13 +24,16 @@ thumbnail.png       miniatura do primeiro quadro (opcional, ignorada ao abrir)
         "opacity": 100, "blendMode": "normal", "colorTag": null, "exportable": true },
       { "type": "group", "id": "G…", "name": "Grupo", "expanded": true, "children": [ … ], … }
     ],
-    "frames": [ { "id": "F…", "duration": 100, "tag": "andar" } ],
+    "frames": [ { "id": "F…", "duration": 100 } ],
+    "tags": [ { "id": "T…", "name": "andar", "from": "F…", "to": "F…",   // quadros inicial e final
+                "color": "#rrggbb", "direction": "forward|reverse|pingpong", "repeat": 0 } ],
     "cels": { "L…/F…": "I…" },            // célula → imagem; ausente = transparente
     "palette": { "id": "…", "name": "…", "colors": ["#rrggbbaa", …] },
     "animation": { "fps": 10, "loop": "loop|once|pingpong", "direction": "forward|reverse" },
     "tiles": { "width": 16, "height": 16, "offsetX": 0, "offsetY": 0 },
     "guides": [ { "axis": "x|y", "position": 8 } ],
-    "symmetry": { "horizontal": false, "vertical": false, "axisX": 16, "axisY": 16 }
+    "symmetry": { "horizontal": false, "vertical": false, "axisX": 16, "axisY": 16 },
+    "colorMode": "indexed"                 // opcional; ausente = RGB
   },
   "images": { "I…": { "file": "images/I….png", "width": 32, "height": 32 } }
 }
@@ -39,6 +42,9 @@ thumbnail.png       miniatura do primeiro quadro (opcional, ignorada ao abrir)
 * Várias células podem apontar para a mesma imagem (células vinculadas).
 * Toda imagem tem exatamente as dimensões do documento.
 * Cores de paleta são `#RRGGBBAA`.
+* `colorMode: "indexed"` marca o modo indexado: os pixels continuam em RGBA,
+  mas o editor garante que só usem cores da paleta. Versões anteriores ignoram
+  o campo e abrem o arquivo normalmente em RGB.
 
 ## Validação ao abrir
 
@@ -79,6 +85,8 @@ O campo `version` é obrigatório. Ao abrir:
 * versão maior que a suportada → mensagem pedindo para atualizar o PixelCraft;
 * versão menor → migrações encadeadas (`src/project/migrations.ts`), uma por
   versão. A versão 0 (pré-lançamento) é aceita e convertida.
+* v1 → v2: o marcador de texto que ficava no quadro (`frames[].tag`, válido
+  até o próximo marcador) vira uma tag com intervalo, cor e direção.
 
 Ao mudar o formato: incremente `CURRENT_FORMAT_VERSION`, adicione a migração
 `N → N+1` e um teste com um arquivo da versão anterior.
