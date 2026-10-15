@@ -1,11 +1,13 @@
 name: Release
 
-# Publishing a version: push a tag like v0.2.0 on main. This builds the Linux
-# packages, smoke-tests them and creates the GitHub Release with the notes
-# from docs/releases/<version>.md and a SHA256SUMS file.
+# Publishing a version: push a tag like v0.2.0 on main, or run this workflow
+# by hand on main (it then creates the tag v<package.json version>). It builds
+# the Linux packages, smoke-tests them and creates the GitHub Release with the
+# notes from docs/releases/<version>.md and a SHA256SUMS file.
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -19,11 +21,16 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Tag must match package.json
+      - name: Version from package.json
         run: |
           v="$(node -p "require('./package.json').version")"
-          test "v$v" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME != package.json $v"; exit 1; }
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            test "v$v" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME != package.json $v"; exit 1; }
+          else
+            test "$GITHUB_REF_NAME" = main || { echo "Run it on main"; exit 1; }
+          fi
           test -f "docs/releases/$v.md" || { echo "Missing docs/releases/$v.md"; exit 1; }
+          echo "VERSION=$v" >> "$GITHUB_ENV"
       - run: npm ci
       - run: sudo apt-get update && sudo apt-get install -y xvfb desktop-file-utils appstream flatpak flatpak-builder
       - run: npm run build
@@ -34,8 +41,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          v="${GITHUB_REF_NAME#v}"
           cd release
           sha256sum *.deb *.AppImage *.flatpak > SHA256SUMS
-          gh release create "$GITHUB_REF_NAME" *.deb *.AppImage *.flatpak SHA256SUMS \
-            --title "PixelCraft $v" --notes-file "../docs/releases/$v.md" --verify-tag
+          # On a manual run the tag does not exist yet; gh creates it on this commit.
+          gh release create "v$VERSION" *.deb *.AppImage *.flatpak SHA256SUMS \
+            --title "PixelCraft $VERSION" --notes-file "../docs/releases/$VERSION.md" --target "$GITHUB_SHA"
